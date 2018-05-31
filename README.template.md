@@ -1,6 +1,6 @@
-# versions - command-line version operations
+# versions
 
-`versions` is a versioning tool for the command line.
+`versions` is a tool for working with (SemVer) versions.
 
 Supported operations (today):
 
@@ -10,31 +10,22 @@ Supported operations (today):
 - Fetch versions from Git tags
 - Fetch versions from Docker image tags
 
+Planned operations:
+
+- Dependency version selection using [MVS](https://research.swtch.com/vgo-mvs)
+- Dependency version graph analysis (without solving)
+
 ## Contents
 
-<!-- TOC -->
-
-- [Contents](#contents)
 - [Get it](#get-it)
 - [Use it](#use-it)
     - [Compare versions](#compare-versions)
-        - [Output a single boolean indicating whether one version is later than another](#output-a-single-boolean-indicating-whether-one-version-is-later-than-another)
     - [Sort versions](#sort-versions)
-        - [Print versions in oldest-to-newest order](#print-versions-in-oldest-to-newest-order)
-        - [Print the latest N versions in oldest-to-newest order](#print-the-latest-n-versions-in-oldest-to-newest-order)
     - [Select versions](#select-versions)
-    - [Select the single latest version satisfying the given constraint](#select-the-single-latest-version-satisfying-the-given-constraint)
     - [Fetch versions](#fetch-versions)
-        - [Fetch and interpret all SemVer git tags as versions](#fetch-and-interpret-all-semver-git-tags-as-versions)
-        - [Fetch and determine the latest version from Git tags](#fetch-and-determine-the-latest-version-from-git-tags)
-        - [Fetch and interpret all Docker image tags as versions](#fetch-and-interpret-all-docker-image-tags-as-versions)
-        - [Fetch and determine the latest version from Docker image tags](#fetch-and-determine-the-latest-version-from-docker-image-tags)
     - [JSON output](#json-output)
-    - [Sort order](#sort-order)
 - [Licensing](#licensing)
 - [Comments](#comments)
-
-<!-- /TOC -->
 
 ## Get it
 
@@ -127,7 +118,7 @@ $ versions --latest=2 sort 2.0.0 0.1.0 10.0.0
 
 ### Select versions
 
-### Select the single latest version satisfying the given constraint
+##### Select the single latest version satisfying the given constraint
 
 ```sh
 $ versions select single '2.*.*' 2.0.0 0.1.0 10.0.0
@@ -155,7 +146,7 @@ $ versions select single '^0.0.1' 2.0.0 0.1.0 10.0.0
 #### Fetch and interpret all SemVer git tags as versions
 
 ```sh
-$ versions --indent 2 fetch git https://github.com/sgreben/jp
+$ versions --indent=2 fetch git https://github.com/sgreben/jp
 ```
 ```json
 [
@@ -194,7 +185,7 @@ $ versions fetch -l 1 git https://github.com/sgreben/jp
 #### Fetch and interpret all Docker image tags as versions
 
 ```sh
-$ versions fetch docker alpine | jq .
+$ versions --indent=2 fetch docker alpine
 ```
 ```json
 [
