@@ -10,8 +10,11 @@ Supported operations (today):
 - Fetch versions from Git tags
 - Fetch versions from Docker image tags
 
+## Contents
+
 <!-- TOC -->
 
+- [Contents](#contents)
 - [Get it](#get-it)
 - [Use it](#use-it)
     - [Compare versions](#compare-versions)
