@@ -81,7 +81,6 @@ Run 'versions COMMAND --help' for more information on a command.
 ### Compare versions
 
 ```text
-
 Usage: versions compare [OPTIONS] COMMAND [arg...]
 
 Compare versions
