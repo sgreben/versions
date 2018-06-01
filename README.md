@@ -371,7 +371,7 @@ Run 'versions complete COMMAND --help' for more information on a command.
 ```sh
 $ versions complete install
 $ tail -n1 ~/.zshrc
-complete -o nospace -C /.../bin/versions versions
+complete -o nospace -C /go/bin/versions versions
 ```
 
 ```sh
