@@ -154,7 +154,9 @@ $ versions --indent=2 fetch git https://github.com/sgreben/jp
     "Version": "1.0.0",
     "Source": {
       "Git": {
-        "RepositoryURL": "https://github.com/sgreben/jp",
+        "Repository": {
+          "URL": "https://github.com/sgreben/jp"
+        },
         "Reference": "refs/tags/1.0.0"
       }
     }
@@ -163,11 +165,10 @@ $ versions --indent=2 fetch git https://github.com/sgreben/jp
     "Version": "1.0.1",
     "Source": {
       "Git": {
-        "RepositoryURL": "https://github.com/sgreben/jp",
+        "Repository": {
+          "URL": "https://github.com/sgreben/jp"
+        },
         "Reference": "refs/tags/1.0.1"
-      }
-    }
-  },
   // ...
 ]
 ```
@@ -178,7 +179,7 @@ $ versions --indent=2 fetch git https://github.com/sgreben/jp
 $ versions fetch -l 1 git https://github.com/sgreben/jp
 ```
 ```json
-[{"Version":"1.1.11","Source":{"Git":{"RepositoryURL":"https://github.com/sgreben/jp","Reference":"refs/tags/1.1.11"}}}]
+[{"Version":"1.1.11","Source":{"Git":{"Repository":{"URL":"https://github.com/sgreben/jp"},"Reference":"refs/tags/1.1.11"}}}]
 ```
 
 
