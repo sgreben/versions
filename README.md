@@ -24,6 +24,7 @@ Planned operations for `v1.0.0`:
     - [Select versions](#select-versions)
     - [Fetch versions](#fetch-versions)
     - [JSON output](#json-output)
+    - [Shell completion](#shell-completion)
 - [Licensing](#licensing)
 - [Comments](#comments)
 
