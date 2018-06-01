@@ -118,7 +118,7 @@ $ versions --latest=2 sort 2.0.0 0.1.0 10.0.0
 
 ### Select versions
 
-##### Select the single latest version satisfying the given constraint
+#### Select the single latest version satisfying the given constraint
 
 ```sh
 $ versions select single '2.*.*' 2.0.0 0.1.0 10.0.0
@@ -141,7 +141,7 @@ $ versions select single '^0.0.1' 2.0.0 0.1.0 10.0.0
 "0.1.0"
 ```
 
-##### Select the single latest version from Git tags satisfying the given constraint
+#### Select the single latest version from Git tags satisfying the given constraint
 
 ```sh
 $ versions select --from-git=https://github.com/sgreben/jp single '~1.0.0'
@@ -157,7 +157,7 @@ $ versions select --from-git=https://github.com/sgreben/jp single '^1.0.0'
 "1.1.11"
 ```
 
-##### Select the single latest version from Docker tags satisfying the given constraint
+#### Select the single latest version from Docker tags satisfying the given constraint
 
 ```sh
 $ versions select --from-docker=alpine single '<3.7'
