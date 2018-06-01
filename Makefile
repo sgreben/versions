@@ -1,4 +1,4 @@
-VERSION = 0.0.1
+VERSION = 0.0.2
 
 APP      := versions
 PACKAGES := $(shell go list -f {{.Dir}} ./...)
@@ -15,9 +15,14 @@ release-ci: README.md zip
 
 release: README.md
 	git reset
+	dep ensure
+	git add vendor
+	git add Gopkg.toml Gopkg.lock
+	git commit -m "dep ensure" || true
+	git reset
 	git add README.md
 	git add Makefile
-	git commit -am "Release $(VERSION)" || true
+	git commit -m "Release $(VERSION)" || true
 	git tag "$(VERSION)"
 	git push
 	git push origin "$(VERSION)"
