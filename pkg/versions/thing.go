@@ -15,28 +15,33 @@ type Thing struct {
 	Name     ThingName
 	Versions ThingVersions
 	Wants    ThingWants
-	Cached   *func(string) (io.Reader, error)
-	ThingSource
+	Parts    ThingParts
 }
 
-func (t Thing) Fetch(part string) (io.Reader, error) {
+// ThingParts is the stuff that makes up the thing
+type ThingParts struct {
+	Cached *func(string) (io.Reader, error)
+	ThingPartsSource
+}
+
+func (t ThingParts) FetchOrCached(part string) (io.Reader, error) {
 	if t.Cached != nil {
 		return (*t.Cached)(part)
 	}
-	return t.ThingSource.Fetch(part)
+	return t.ThingPartsSource.Fetch(part)
 }
 
-// ThingSource specifies how to obtain a thing
-type ThingSource struct {
-	FromGit *ThingSourceGit
+// ThingPartsSource specifies how to obtain a thing's parts
+type ThingPartsSource struct {
+	FromGit *ThingPartsSourceGit
 }
 
-func (t ThingSource) Fetch(part string) (io.Reader, error) {
+func (t ThingPartsSource) Fetch(part string) (io.Reader, error) {
 	switch {
 	case t.FromGit != nil:
 		return t.FromGit.Fetch(part)
 	default:
-		return nil, errors.New("no ThingSource defined")
+		return nil, errors.New("no ThingPartsSource defined")
 	}
 }
 
@@ -54,21 +59,18 @@ func (t *ThingWants) CachedOrFetch(thing Thing) ([]WantedThing, error) {
 
 // ThingWantsSource specifies how to determine which other things a thing wants
 type ThingWantsSource struct {
-	Part     string
-	FromJSON *ThingWantsSourceJSON
-	FromTOML *ThingWantsSourceTOML
+	Part           string
+	FromSerialized *ThingWantsSourceSerialized
 }
 
 func (t *ThingWantsSource) Fetch(thing Thing) ([]WantedThing, error) {
-	part, err := thing.Fetch(t.Part)
+	part, err := thing.Parts.FetchOrCached(t.Part)
 	if err != nil {
 		return nil, err
 	}
 	switch {
-	case t.FromJSON != nil:
-		return t.FromJSON.Fetch(part)
-	case t.FromTOML != nil:
-		return t.FromTOML.Fetch(part)
+	case t.FromSerialized != nil:
+		return t.FromSerialized.Fetch(part)
 	default:
 		return nil, errors.New("no ThingWantsSource defined")
 	}

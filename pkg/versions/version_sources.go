@@ -1,8 +1,12 @@
 package versions
 
+import (
+	"github.com/sgreben/versions/pkg/simplegit"
+)
+
 type VersionSourceGit struct {
-	RepositoryURL string
-	Reference     string
+	Repository simplegit.Repository
+	Reference  string
 }
 
 type VersionSourceDocker struct {

@@ -145,7 +145,7 @@ func main() {
 	})
 
 	completeCmd.Sub["select"] = complete.Command{
-		Args: versionscmd.PredictSet1("single", "mvs"),
+		Args: versionscmd.PredictSet1("single", "graph"),
 	}
 	app.Command("select", "Select versions given constraints", func(cmd *cli.Cmd) {
 		cmd.Command("single", "Select a single version", func(cmd *cli.Cmd) {
@@ -158,7 +158,7 @@ func main() {
 				selectSingleCmd(*constraint, *versions)
 			}
 		})
-		cmd.Command("dependencies", "Select versions to satisfy a dependency graph", func(cmd *cli.Cmd) {
+		cmd.Command("graph", "Select versions to satisfy a constraint graph", func(cmd *cli.Cmd) {
 			cmd.Command("mvs", "Minimal version selection (https://research.swtch.com/vgo-mvs)", func(cmd *cli.Cmd) {
 				cmd.Spec = "THING"
 				var (
