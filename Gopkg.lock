@@ -105,7 +105,7 @@
 
 [[projects]]
   name = "gopkg.in/src-d/go-billy.v4"
-  packages = [".","helper/chroot","helper/polyfill","osfs","util"]
+  packages = [".","helper/chroot","helper/polyfill","memfs","osfs","util"]
   revision = "df053870ae7070b0350624ba5a22161ba3796cc0"
   version = "v4.1.1"
 
@@ -124,6 +124,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3d8ff0f292b44a96f8f635dcd0f73bc7ea16f83bfd74c745d05d048dc391acab"
+  inputs-digest = "28b0dde3d57727aeb338d9c57004d137ee79fd7d10e11cf859f39ff35cafc48f"
   solver-name = "gps-cdcl"
   solver-version = 1
