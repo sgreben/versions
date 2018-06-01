@@ -10,7 +10,7 @@ Supported operations (today):
 - Fetch versions from Git tags
 - Fetch versions from Docker image tags
 
-Planned operations:
+Planned operations for `v1.0.0`:
 
 - Dependency version selection using [MVS](https://research.swtch.com/vgo-mvs)
 - Dependency version graph analysis (without solving)
