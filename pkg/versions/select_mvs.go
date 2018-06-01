@@ -1,9 +1,6 @@
 package versions
 
-import (
-	"fmt"
-	"log"
-)
+import "fmt"
 
 // http://archive.is/aDhCk#selection-135.1-161.208
 
@@ -20,7 +17,6 @@ func (mvs MVSBuildList) Construct() (errs []error) {
 	copy(oldThings, mvs.Things)
 	mvs.Things = mvs.Things[:0]
 	for _, oldThing := range oldThings {
-		log.Println(oldThing.Name)
 		mvs.Things = append(mvs.Things, oldThing)
 		wants, err := oldThing.Wants.CachedOrFetch(oldThing)
 		if err != nil {
@@ -28,7 +24,6 @@ func (mvs MVSBuildList) Construct() (errs []error) {
 			continue
 		}
 		for _, want := range wants {
-			log.Println(want.Thing.Name, want.WantedVersion)
 			mvs.Things = append(mvs.Things, want.Thing)
 			versions, err := want.Thing.Versions.CachedOrFetch()
 			if err != nil {
