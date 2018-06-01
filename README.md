@@ -141,6 +141,39 @@ $ versions select single '^0.0.1' 2.0.0 0.1.0 10.0.0
 "0.1.0"
 ```
 
+##### Select the single latest version from Git tags satisfying the given constraint
+
+```sh
+$ versions select --from-git=https://github.com/sgreben/jp single '~1.0.0'
+```
+```json
+'1.0.1"
+```
+
+```sh
+$ versions select --from-git=https://github.com/sgreben/jp single '^1.0.0'
+```
+```json
+"1.1.11"
+```
+
+##### Select the single latest version from Docker tags satisfying the given constraint
+
+```sh
+$ versions select --from-docker=alpine single '<3.7'
+```
+```json
+"3.6.0"
+```
+
+```sh
+$ versions select --from-docker=alpine single '^3.0.0'
+```
+```json
+"3.7.0"
+```
+
+
 ### Fetch versions
 
 #### Fetch and interpret all SemVer git tags as versions

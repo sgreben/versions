@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-func fetchFromGitCmd(url string, limit int) {
+func fetchFromGit(url string, limit int) (versions.VersionsWithSources, error) {
 	vs := versions.ThingVersionsSourceGit{
 		Repository: simplegit.Repository{
 			URL: url,
@@ -22,6 +22,18 @@ func fetchFromGitCmd(url string, limit int) {
 		},
 	}
 	svs, err := vs.Fetch()
+	if err != nil {
+		return nil, err
+	}
+	sort.Sort(svs)
+	if limit > 0 && len(svs) > limit {
+		svs = svs[len(svs)-limit:]
+	}
+	return svs, nil
+}
+
+func fetchFromGitCmd(url string, limit int) {
+	svs, err := fetchFromGit(url, limit)
 	if err != nil {
 		log.Println(err)
 		exit.NonzeroBecause = append(exit.NonzeroBecause, err.Error())
@@ -37,7 +49,7 @@ func fetchFromGitCmd(url string, limit int) {
 	}
 }
 
-func fetchFromDockerCmd(repository string, limit int) {
+func fetchFromDocker(repository string, limit int) (versions.VersionsWithSources, error) {
 	vs := versions.ThingVersionsSourceDocker{
 		Repository: &simpledocker.Repository{
 			URL: repository,
@@ -45,11 +57,19 @@ func fetchFromDockerCmd(repository string, limit int) {
 	}
 	svs, err := vs.Fetch()
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
 	sort.Sort(svs)
 	if limit > 0 && len(svs) > limit {
 		svs = svs[len(svs)-limit:]
+	}
+	return svs, err
+}
+
+func fetchFromDockerCmd(repository string, limit int) {
+	svs, err := fetchFromDocker(repository, limit)
+	if err != nil {
+		log.Println(err)
 	}
 	err = jsonEncode(svs, os.Stdout)
 	if err != nil {

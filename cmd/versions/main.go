@@ -146,8 +146,16 @@ func main() {
 
 	completeCmd.Sub["select"] = complete.Command{
 		Args: versionscmd.PredictSet1("single", "graph"),
+		Flags: complete.Flags{
+			"--from-git":    complete.PredictAnything,
+			"--from-docker": complete.PredictAnything,
+		},
 	}
 	app.Command("select", "Select versions given constraints", func(cmd *cli.Cmd) {
+		var (
+			fromGit    = cmd.StringOpt("from-git", "", "Fetch candidate versions from Git tags")
+			fromDocker = cmd.StringOpt("from-docker", "", "Fetch candidate versions from Docker tags")
+		)
 		cmd.Command("single", "Select a single version", func(cmd *cli.Cmd) {
 			cmd.Spec = "CONSTRAINT [VERSIONS...]"
 			var (
@@ -155,6 +163,24 @@ func main() {
 				versions   = cmd.StringsArg("VERSIONS", nil, "Candidate versions")
 			)
 			cmd.Action = func() {
+				if *fromGit != "" {
+					vs, err := fetchFromGit(*fromGit, 0)
+					if err != nil {
+						exit.NonzeroBecause = append(exit.NonzeroBecause, err.Error())
+					}
+					for _, v := range vs {
+						*versions = append(*versions, v.Version.String())
+					}
+				}
+				if *fromDocker != "" {
+					vs, err := fetchFromDocker(*fromDocker, 0)
+					if err != nil {
+						exit.NonzeroBecause = append(exit.NonzeroBecause, err.Error())
+					}
+					for _, v := range vs {
+						*versions = append(*versions, v.Version.String())
+					}
+				}
 				selectSingleCmd(*constraint, *versions)
 			}
 		})
