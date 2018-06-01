@@ -80,6 +80,22 @@ Run 'versions COMMAND --help' for more information on a command.
 
 ### Compare versions
 
+```text
+
+Usage: versions compare [OPTIONS] COMMAND [arg...]
+
+Compare versions
+
+Options:
+      --fail   Exit with non-zero code if the result is 'false'
+
+Commands:
+  later        Check if a version is strictly later than another version
+  earlier      Check if a version is strictly earlier than another version
+
+Run 'versions compare COMMAND --help' for more information on a command.
+```
+
 #### Output a single boolean indicating whether one version is later than another
 
 ```sh
@@ -97,6 +113,18 @@ false
 ```
 
 ### Sort versions
+
+```text
+Usage: versions sort [OPTIONS] [VERSIONS...]
+
+Sort versions
+
+Arguments:
+  VERSIONS       Versions to sort
+
+Options:
+  -l, --latest   Print only the latest `N` versions (default 0)
+```
 
 #### Print versions in oldest-to-newest order
 
@@ -117,6 +145,22 @@ $ versions --latest=2 sort 2.0.0 0.1.0 10.0.0
 ```
 
 ### Select versions
+
+```text
+Usage: versions select [OPTIONS] COMMAND [arg...]
+
+Select versions given constraints
+
+Options:
+      --from-git      Fetch candidate versions from Git tags
+      --from-docker   Fetch candidate versions from Docker tags
+
+Commands:
+  single              Select a single version
+  graph               Select versions to satisfy a constraint graph
+
+Run 'versions select COMMAND --help' for more information on a command.
+```
 
 #### Select the single latest version satisfying the given constraint
 
@@ -175,6 +219,21 @@ $ versions select --from-docker=alpine single '^3.0.0'
 
 
 ### Fetch versions
+
+```text
+Usage: versions fetch [OPTIONS] COMMAND [arg...]
+
+Fetch versions
+
+Options:
+  -l, --latest   Print only the latest `N` versions (default 0)
+
+Commands:
+  git            Fetch versions from Git tags
+  docker         Fetch versions from Docker image tags
+
+Run 'versions fetch COMMAND --help' for more information on a command.
+```
 
 #### Fetch and interpret all SemVer git tags as versions
 
