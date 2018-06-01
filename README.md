@@ -190,7 +190,7 @@ $ versions select single '^0.0.1' 2.0.0 0.1.0 10.0.0
 $ versions select --from-git=https://github.com/sgreben/jp single '~1.0.0'
 ```
 ```json
-'1.0.1"
+"1.0.1"
 ```
 
 ```sh
