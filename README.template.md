@@ -351,6 +351,37 @@ $ versions sort 0.0.1 1.0.0
 ["0.0.1","1.0.0"]
 ```
 
+### Shell completion
+
+The tool can install shell (`zsh`, `fish`, `bash`) completion for itself:
+
+```text
+Usage: versions complete COMMAND [arg...]
+
+Shell completion (zsh, fish, bash)
+
+Commands:
+  install      Install all completions
+  uninstall    Uninstall all completions
+
+Run 'versions complete COMMAND --help' for more information on a command.
+```
+
+```sh
+$ versions complete install
+$ tail -n1 ~/.zshrc
+complete -o nospace -C /.../bin/versions versions
+```
+
+```sh
+$ versions <TAB>
+compare  fetch    help     select   sort
+```
+```sh
+$ versions select -<TAB>
+--from-docker  --from-git     --help         -h
+```
+
 ## Licensing
 
 - Any original code is licensed under the [MIT License](./LICENSE).
