@@ -11,12 +11,12 @@ import (
 // Constraints is one or more constraint that a semantic version can be
 // checked against.
 type Constraints struct {
-	constraints [][]*constraint
+	Constraints [][]*constraint
 }
 
 func (cs Constraints) String() string {
 	var disj []string
-	for _, c := range cs.constraints {
+	for _, c := range cs.Constraints {
 		var conj []string
 		for _, c := range c {
 			conj = append(disj, c.orig)
@@ -49,7 +49,7 @@ func ParseConstraint(c string) (*Constraints, error) {
 		or[k] = result
 	}
 
-	o := &Constraints{constraints: or}
+	o := &Constraints{Constraints: or}
 	return o, nil
 }
 
@@ -68,7 +68,7 @@ func (cs Constraints) LatestMatching(c Collection) *Version {
 // Check tests if a version satisfies the constraints.
 func (cs Constraints) Check(v *Version) bool {
 	// loop over the ORs and check the inner ANDs
-	for _, o := range cs.constraints {
+	for _, o := range cs.Constraints {
 		allSatisfied := true
 		for _, c := range o {
 			if !c.check(v) {
@@ -90,7 +90,7 @@ func (cs Constraints) Check(v *Version) bool {
 func (cs Constraints) Validate(v *Version) (bool, []error) {
 	// loop over the ORs and check the inner ANDs
 	var e []error
-	for _, o := range cs.constraints {
+	for _, o := range cs.Constraints {
 		allSatisfied := true
 		for _, c := range o {
 			if !c.check(v) {

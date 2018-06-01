@@ -1,8 +1,6 @@
 package versions
 
-import (
-	"github.com/sgreben/versions/pkg/simplegit"
-)
+import "github.com/sgreben/versions/pkg/simplegit"
 
 type VersionSourceGit struct {
 	Repository simplegit.Repository
