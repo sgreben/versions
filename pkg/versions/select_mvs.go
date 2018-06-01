@@ -44,3 +44,16 @@ func (mvs MVSBuildList) Construct() (errs []error) {
 	}
 	return
 }
+
+func (mvs MVSBuildList) Append(other MVSBuildList) {
+	for _, otherThing := range other.Things {
+		mvs.Things = append(mvs.Things, otherThing)
+		if currentVersion, ok := mvs.Versions[otherThing.Name]; ok {
+			if otherVersion, ok := other.Versions[otherThing.Name]; ok {
+				if currentVersion.Version.LessThan(otherVersion.Version) {
+					mvs.Versions[otherThing.Name] = otherVersion
+				}
+			}
+		}
+	}
+}
