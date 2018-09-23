@@ -234,7 +234,7 @@ Select versions to satisfy a constraint graph using MVS (https://research.swtch.
 
 Arguments:
   TARGET            The name of the target package
-  EDGE_OR_VERSION   Constraint graph edges (syntax: x:1.0.0->y:~1.2.3) or version definitions (syntax: x:1.3.0)
+  EDGE_OR_VERSION   Constraint graph edges (syntax: x=1.0.0 -> y~1.2.3) or version definitions (syntax: x=1.3.0)
 ```
 
 #### Select a set of versions using MVS
