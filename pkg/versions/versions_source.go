@@ -6,16 +6,35 @@ import (
 	"github.com/sgreben/versions/pkg/simplegit"
 )
 
-type ThingVersionsSourceGit struct {
+// Source is a source of versions
+type Source struct {
+	Git    *SourceGit
+	Docker *SourceDocker
+}
+
+// Fetch retrieves versions
+func (t Source) Fetch() (WithSources, error) {
+	switch {
+	case t.Git != nil:
+		return t.Git.Fetch()
+	case t.Docker != nil:
+		return t.Docker.Fetch()
+	}
+	return nil, nil
+}
+
+// SourceGit is a git repository used as a version source
+type SourceGit struct {
 	Repository simplegit.Repository
 }
 
-func (t ThingVersionsSourceGit) Fetch() (VersionsWithSources, error) {
+// Fetch retrieves git tags as versions
+func (t SourceGit) Fetch() (WithSources, error) {
 	tags, err := t.Repository.Tags()
 	if err != nil {
 		return nil, err
 	}
-	out := make(VersionsWithSources, 0, len(tags))
+	out := make(WithSources, 0, len(tags))
 	for _, tag := range tags {
 		version, err := semver.Parse(tag.Name)
 		if err != nil {
@@ -35,16 +54,18 @@ func (t ThingVersionsSourceGit) Fetch() (VersionsWithSources, error) {
 	return out, nil
 }
 
-type ThingVersionsSourceDocker struct {
+// SourceDocker is a Docker repository used as a version source
+type SourceDocker struct {
 	Repository *simpledocker.Repository
 }
 
-func (t ThingVersionsSourceDocker) Fetch() (VersionsWithSources, error) {
+// Fetch retrieves Docker tags as versions
+func (t SourceDocker) Fetch() (WithSources, error) {
 	tags, err := t.Repository.Tags()
 	if err != nil {
 		return nil, err
 	}
-	out := make(VersionsWithSources, 0, len(tags))
+	out := make(WithSources, 0, len(tags))
 	for _, tag := range tags {
 		version, err := semver.Parse(tag.Name)
 		if err != nil {

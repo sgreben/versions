@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestParseConstraint(t *testing.T) {
+func TestParseConstraint1(t *testing.T) {
 	tests := []struct {
 		in  string
 		f   cfunc
@@ -111,7 +111,7 @@ func TestConstraintCheck(t *testing.T) {
 	}
 }
 
-func TestParseConstraint(t *testing.T) {
+func TestParseConstraint2(t *testing.T) {
 	tests := []struct {
 		input string
 		ors   int
@@ -142,13 +142,13 @@ func TestParseConstraint(t *testing.T) {
 			continue
 		}
 
-		l := len(v.constraints)
+		l := len(v.Constraints)
 		if tc.ors != l {
 			t.Errorf("Expected %s to have %d ORs but got %d",
 				tc.input, tc.ors, l)
 		}
 
-		l = len(v.constraints[0])
+		l = len(v.Constraints[0])
 		if tc.count != l {
 			t.Errorf("Expected %s to have %d constraints but got %d",
 				tc.input, tc.count, l)

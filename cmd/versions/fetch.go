@@ -1,22 +1,23 @@
 package main
 
 import (
+	"log"
+	"os"
+	"sort"
+
 	"github.com/sgreben/versions/pkg/simpledocker"
 	"github.com/sgreben/versions/pkg/simplegit"
 	"github.com/sgreben/versions/pkg/versions"
 	git "gopkg.in/src-d/go-git.v4"
-	"log"
-	"os"
-	"sort"
 )
 
-func fetchFromGit(url string, limit int) (versions.VersionsWithSources, error) {
-	vs := versions.ThingVersionsSourceGit{
+func fetchFromGit(url string, limit int) (versions.WithSources, error) {
+	vs := versions.SourceGit{
 		Repository: simplegit.Repository{
 			URL: url,
-			CloneOptions: &git.CloneOptions{
+			CloneOptions: git.CloneOptions{
 				NoCheckout: true,
-				Depth:      0,
+				Depth:      1,
 				Tags:       git.AllTags,
 			},
 		},
@@ -49,8 +50,8 @@ func fetchFromGitCmd(url string, limit int) {
 	}
 }
 
-func fetchFromDocker(repository string, limit int) (versions.VersionsWithSources, error) {
-	vs := versions.ThingVersionsSourceDocker{
+func fetchFromDocker(repository string, limit int) (versions.WithSources, error) {
+	vs := versions.SourceDocker{
 		Repository: &simpledocker.Repository{
 			URL: repository,
 		},

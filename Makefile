@@ -1,4 +1,4 @@
-VERSION = 0.0.2
+VERSION = 1.0.0
 
 APP      := versions
 PACKAGES := $(shell go list -f {{.Dir}} ./...)
@@ -11,9 +11,8 @@ clean:
 	rm -rf binaries/
 	rm -rf release/
 
-release-ci: README.md zip
-
-release: README.md
+# go get -u github.com/github/hub
+release-manual: README.md zip
 	git reset
 	dep ensure
 	git add vendor
@@ -23,12 +22,6 @@ release: README.md
 	git add README.md
 	git add Makefile
 	git commit -m "Release $(VERSION)" || true
-	git tag "$(VERSION)"
-	git push
-	git push origin "$(VERSION)"
-
-# go get -u github.com/github/hub
-release-manual: README.md zip
 	git push
 	hub release create $(VERSION) -m "$(VERSION)" -a release/$(APP)_$(VERSION)_osx_x86_64.tar.gz -a release/$(APP)_$(VERSION)_windows_x86_64.zip -a release/$(APP)_$(VERSION)_linux_x86_64.tar.gz -a release/$(APP)_$(VERSION)_osx_x86_32.tar.gz -a release/$(APP)_$(VERSION)_windows_x86_32.zip -a release/$(APP)_$(VERSION)_linux_x86_32.tar.gz -a release/$(APP)_$(VERSION)_linux_arm64.tar.gz
 

@@ -30,13 +30,14 @@ func Parse(name, text string) (*JSONPath, error) {
 	return jp, jp.Parse(text)
 }
 
-// Parse parses the given template and panics on errors
+// MustParse parses the given template and panics on errors
 func MustParse(name, text string) *JSONPath {
 	jp := New(name)
 	jp.MustParse(text)
 	return jp
 }
 
+// JSONPath is a JSONPath expression
 type JSONPath struct {
 	name       string
 	String     string
@@ -75,12 +76,13 @@ func (j *JSONPath) Parse(text string) error {
 	return err
 }
 
-// Parse parses the given template and panics on errors
+// MustParse parses the given template and panics on errors
 func (j *JSONPath) MustParse(text string) {
 	j.String = text
 	j.parser = MustParser(j.name, text)
 }
 
+// FindResults applies the JSONPath expression to data
 func (j *JSONPath) FindResults(data interface{}) ([][]reflect.Value, error) {
 	if j.parser == nil {
 		return nil, fmt.Errorf("%s is an incomplete jsonpath template", j.name)
@@ -98,17 +100,17 @@ func (j *JSONPath) FindResults(data interface{}) ([][]reflect.Value, error) {
 
 		// encounter an end node, break the current block
 		if j.endRange > 0 && j.endRange <= j.inRange {
-			j.endRange -= 1
+			j.endRange--
 			break
 		}
 		// encounter a range node, start a range loop
 		if j.beginRange > 0 {
-			j.beginRange -= 1
-			j.inRange += 1
+			j.beginRange--
+			j.inRange++
 			for k, value := range results {
 				j.parser.Root.Nodes = nodes[i+1:]
 				if k == len(results)-1 {
-					j.inRange -= 1
+					j.inRange--
 				}
 				nextResults, err := j.FindResults(value.Interface())
 				if err != nil {
@@ -201,11 +203,11 @@ func (j *JSONPath) evalIdentifier(input []reflect.Value, node *IdentifierNode) (
 	switch node.Name {
 	case "range":
 		j.stack = append(j.stack, j.cur)
-		j.beginRange += 1
+		j.beginRange++
 		results = input
 	case "end":
 		if j.endRange < j.inRange { // inside a loop, break the current block
-			j.endRange += 1
+			j.endRange++
 			break
 		}
 		// the loop is about to end, pop value and continue the following execution

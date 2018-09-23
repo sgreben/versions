@@ -11,11 +11,22 @@ import (
 	"reflect"
 )
 
+// Equal is the Equal template function
 var Equal = eq
+
+// GreaterEqual is the GreaterEqual template function
 var GreaterEqual = ge
+
+// Greater is the Greater template function
 var Greater = gt
+
+// LessEqual is the LessEqual template function
 var LessEqual = le
+
+// Less is the Less template function
 var Less = lt
+
+// NotEqual is the NotEqual template function
 var NotEqual = ne
 
 // Comparison.

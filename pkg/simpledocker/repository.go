@@ -8,12 +8,14 @@ import (
 	"strings"
 )
 
+// Repository represents a Docker repository
 type Repository struct {
-	URL       string
-	V2        *RepositoryV2
-	DockerHub *RepositoryDockerHub
+	URL       string               `json:"URL"`
+	V2        *RepositoryV2        `json:"-"`
+	DockerHub *RepositoryDockerHub `json:"-"`
 }
 
+// Tags returns a list of tags in this repository
 func (r *Repository) Tags() (out []struct {
 	Name  string
 	Image string
@@ -32,11 +34,13 @@ func (r *Repository) Tags() (out []struct {
 	}
 }
 
+// RepositoryV2 represents a Docker repository with a V2 API
 type RepositoryV2 struct {
 	Registry string
 	Image    string
 }
 
+// Tags returns a list of tags in this repository
 func (r *RepositoryV2) Tags() (out []struct {
 	Name  string
 	Image string
@@ -71,11 +75,13 @@ func (r *RepositoryV2) Tags() (out []struct {
 	return out, nil
 }
 
+// RepositoryDockerHub represents a Docker Hub repository
 type RepositoryDockerHub struct {
 	User  string
 	Image string
 }
 
+// Tags returns a list of tags in this repository
 func (r *RepositoryDockerHub) Tags() (out []struct {
 	Name  string
 	Image string
@@ -135,9 +141,9 @@ func (r *RepositoryDockerHub) Tags() (out []struct {
 		}
 	}
 	return out, nil
-
 }
 
+// Parse parses the repository URL and sets the V2 and DockerHub fields accordingly
 func (r *Repository) Parse() error {
 	repository := r.URL
 	i := strings.IndexByte(repository, '/')

@@ -8,10 +8,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sgreben/versions/pkg/semver"
+
+	"github.com/sgreben/versions/pkg/versions"
 	"github.com/sgreben/versions/pkg/versionscmd"
 
 	"github.com/posener/complete"
 	"github.com/posener/complete/cmd/install"
+
+	"github.com/sgreben/flagvar"
 
 	cli "github.com/jawher/mow.cli"
 )
@@ -145,7 +150,7 @@ func main() {
 	})
 
 	completeCmd.Sub["select"] = complete.Command{
-		Args: versionscmd.PredictSet1("single", "graph"),
+		Args: versionscmd.PredictSet1("single", "all", "graph"),
 		Flags: complete.Flags{
 			"--from-git":    complete.PredictAnything,
 			"--from-docker": complete.PredictAnything,
@@ -184,16 +189,92 @@ func main() {
 				selectSingleCmd(*constraint, *versions)
 			}
 		})
-		cmd.Command("graph", "Select versions to satisfy a constraint graph", func(cmd *cli.Cmd) {
-			cmd.Command("mvs", "Minimal version selection (https://research.swtch.com/vgo-mvs)", func(cmd *cli.Cmd) {
-				cmd.Spec = "THING"
-				var (
-					thing = cmd.StringArg("THING", "", "The thing that has dependecies")
-				)
-				cmd.Action = func() {
-					selectMvsCmd(*thing)
+		cmd.Command("all", "Select all matching versions", func(cmd *cli.Cmd) {
+			cmd.Spec = "CONSTRAINT [VERSIONS...]"
+			var (
+				constraint = cmd.StringArg("CONSTRAINT", "", "Version constraint")
+				versions   = cmd.StringsArg("VERSIONS", nil, "Candidate versions")
+			)
+			cmd.Action = func() {
+				if *fromGit != "" {
+					vs, err := fetchFromGit(*fromGit, 0)
+					if err != nil {
+						exit.NonzeroBecause = append(exit.NonzeroBecause, err.Error())
+					}
+					for _, v := range vs {
+						*versions = append(*versions, v.Version.String())
+					}
 				}
-			})
+				if *fromDocker != "" {
+					vs, err := fetchFromDocker(*fromDocker, 0)
+					if err != nil {
+						exit.NonzeroBecause = append(exit.NonzeroBecause, err.Error())
+					}
+					for _, v := range vs {
+						*versions = append(*versions, v.Version.String())
+					}
+				}
+				selectAllCmd(*constraint, *versions)
+			}
+		})
+		cmd.Command("mvs", "Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)", func(cmd *cli.Cmd) {
+			cmd.Spec = "TARGET [EDGE_OR_VERSION...]"
+			var (
+				target        = cmd.StringArg("TARGET", "", "The name of the target package")
+				graphEdges    = flagvar.Assignments{Separator: "->"}
+				versionEdges  = flagvar.Assignments{Separator: "="}
+				edgeOrVersion = flagvar.Alternative{
+					Either: &graphEdges,
+					Or:     &versionEdges,
+				}
+			)
+			cmd.VarArg("EDGE_OR_VERSION", &edgeOrVersion, "Constraint graph edges (syntax: x=1.0.0 -> y~1.2.3) or version definitions (syntax: x=1.3.0)")
+			cmd.Action = func() {
+				graph := versions.ConstraintGraph{}
+				for _, kv := range versionEdges.Values {
+					name := strings.TrimSpace(kv.Key)
+					version := strings.TrimSpace(kv.Value)
+					if _, ok := graph[name]; !ok {
+						graph[name] = versions.ConstraintsForVersion{}
+					}
+					if _, ok := graph[name][version]; !ok {
+						graph[name][version] = versions.ConstraintsForName{}
+					}
+				}
+				for _, kv := range graphEdges.Values {
+					thing, wantsThing := kv.Key, kv.Value
+					var name, version string
+					name = thing
+					i := strings.LastIndexByte(thing, '=')
+					if i >= 0 {
+						name, version = thing[:i], thing[i+1:]
+					}
+					name = strings.TrimSpace(name)
+					version = strings.TrimSpace(version)
+
+					var wantsName, constraintString string
+					wantsName = wantsThing
+					constraintString = "*"
+					i = strings.IndexAny(wantsThing, "!=^<:>~")
+					if i >= 0 {
+						wantsName, constraintString = wantsThing[:i], wantsThing[i:]
+					}
+					wantsName = strings.TrimSpace(wantsName)
+					constraintString = strings.TrimSpace(constraintString)
+					if _, ok := graph[name]; !ok {
+						graph[name] = versions.ConstraintsForVersion{}
+					}
+					if _, ok := graph[name][version]; !ok {
+						graph[name][version] = versions.ConstraintsForName{}
+					}
+					constraint, err := semver.ParseConstraint(constraintString)
+					if err != nil {
+						log.Fatal(err)
+					}
+					graph[name][version][wantsName] = constraint
+				}
+				selectMvsCmd(*target, graph)
+			}
 		})
 	})
 

@@ -32,6 +32,7 @@ func (t NodeType) String() string {
 	return NodeTypeName[t]
 }
 
+// Node types
 const (
 	NodeText NodeType = iota
 	NodeArray
@@ -47,6 +48,7 @@ const (
 	NodeBool
 )
 
+// NodeTypeName maps NodeTypes to their names
 var NodeTypeName = map[NodeType]string{
 	NodeText:       "NodeText",
 	NodeArray:      "NodeArray",
@@ -62,6 +64,7 @@ var NodeTypeName = map[NodeType]string{
 	NodeBool:       "NodeBool",
 }
 
+// Node is an AST node of a JSONPath expression
 type Node interface {
 	Type() NodeType
 	String() string

@@ -12,9 +12,13 @@ import (
 // checked against.
 type Constraints struct {
 	Constraints [][]*constraint
+	Original    string
 }
 
 func (cs Constraints) String() string {
+	if cs.Original != "" {
+		return cs.Original
+	}
 	var disj []string
 	for _, c := range cs.Constraints {
 		var conj []string
@@ -30,6 +34,7 @@ func (cs Constraints) String() string {
 // be checked against. If there is a parse error it will be returned.
 func ParseConstraint(c string) (*Constraints, error) {
 
+	cOrig := c
 	// Rewrite - ranges into a comparison operation.
 	c = rewriteRange(c)
 
@@ -49,7 +54,7 @@ func ParseConstraint(c string) (*Constraints, error) {
 		or[k] = result
 	}
 
-	o := &Constraints{Constraints: or}
+	o := &Constraints{Constraints: or, Original: cOrig}
 	return o, nil
 }
 
@@ -63,6 +68,28 @@ func (cs Constraints) LatestMatching(c Collection) *Version {
 		}
 	}
 	return nil
+}
+
+// OldestMatching finds the oldest version (if any) that satisfies the constraints.
+func (cs Constraints) OldestMatching(c Collection) *Version {
+	sort.Sort(c)
+	for _, candidate := range c {
+		if cs.Check(candidate) {
+			return candidate
+		}
+	}
+	return nil
+}
+
+// AllMatching finds the latest version (if any) that satisfies the constraints.
+func (cs Constraints) AllMatching(c Collection) (out []*Version) {
+	sort.Sort(c)
+	for _, candidate := range c {
+		if cs.Check(candidate) {
+			out = append(out, candidate)
+		}
+	}
+	return out
 }
 
 // Check tests if a version satisfies the constraints.

@@ -8,12 +8,15 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
+// Repository represents a git repository
 type Repository struct {
-	URL          string            `json:"URL"`
-	CloneOptions *git.CloneOptions `json:"-"`
-	Cached       *git.Repository   `json:"-"`
+	URL          string           `json:"URL"`
+	CloneOptions git.CloneOptions `json:"-"`
+	Cached       *git.Repository  `json:"-"`
 }
 
+// Fetch clones the repository to an in-memory filesystem
+// The CloneOptions field is used for cloning.
 func (r *Repository) Fetch() error {
 	s := memory.NewStorage()
 	var fs billy.Filesystem
@@ -21,7 +24,7 @@ func (r *Repository) Fetch() error {
 		fs = memfs.New()
 	}
 	r.CloneOptions.URL = r.URL
-	raw, err := git.Clone(s, fs, r.CloneOptions)
+	raw, err := git.Clone(s, fs, &r.CloneOptions)
 	if err != nil {
 		return err
 	}
@@ -29,6 +32,8 @@ func (r *Repository) Fetch() error {
 	return nil
 }
 
+// Raw returns a go-git Repository structure for this repository.
+// Calls Fetch if necessary.
 func (r *Repository) Raw() (raw *git.Repository, err error) {
 	if r.Cached == nil {
 		err = r.Fetch()
@@ -37,6 +42,8 @@ func (r *Repository) Raw() (raw *git.Repository, err error) {
 	return
 }
 
+// Tags returns the list of tags in this repository.
+// Calls Fetch if necessary.
 func (r *Repository) Tags() (out []struct {
 	Name      string
 	Reference string

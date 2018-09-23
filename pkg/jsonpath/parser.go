@@ -35,6 +35,7 @@ const (
 	rightDelim = "}"
 )
 
+// ParserState is a JSONPath parser state
 type ParserState struct {
 	Name  string
 	Root  *ListNode
@@ -45,34 +46,36 @@ type ParserState struct {
 }
 
 var (
+	// ErrSyntax indicates a syntax error
 	ErrSyntax          = errors.New("invalid syntax")
 	dictKeyRex         = regexp.MustCompile(`^'([^']*)'$`)
 	unquotedDictKeyRex = regexp.MustCompile(`^([a-zA-Z][^,]*)$`)
 	sliceOperatorRex   = regexp.MustCompile(`^(-?[\d]*)(:-?[\d]*)?(:[\d]*)?$`)
 )
 
-// Parse parsed the given text and return a node Parser.
+// Parser parses the given text and return a node Parser.
 // If an error is encountered, parsing stops and an empty
 // Parser is returned with the error
 func Parser(name, text string) (*ParserState, error) {
 	p := NewParser(name)
-	err := p.Parser(text)
+	err := p.Parse(text)
 	if err != nil {
 		p = nil
 	}
 	return p, err
 }
 
-// MustParse is like Parse, but panics on errors
+// MustParser is like Parser, but panics on errors
 func MustParser(name, text string) *ParserState {
 	p := NewParser(name)
-	err := p.Parser(text)
+	err := p.Parse(text)
 	if err != nil {
 		panic(err)
 	}
 	return p
 }
 
+// NewParser returns a new parser
 func NewParser(name string) *ParserState {
 	return &ParserState{Name: name}
 }
@@ -88,7 +91,8 @@ func parseAction(name, text string) (*ParserState, error) {
 	return p, nil
 }
 
-func (p *ParserState) Parser(text string) error {
+// Parse parses the given JSONPath-syntax string
+func (p *ParserState) Parse(text string) error {
 	p.input = text
 	p.Root = newList()
 	p.pos = 0

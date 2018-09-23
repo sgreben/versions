@@ -1,29 +1,28 @@
 # versions
 
-`versions` is a tool for working with (SemVer) versions.
+`versions` is a tool for working with (SemVer) versions on the command-line.
 
-Supported operations (today):
+Supported operations:
 
 - Compare versions
 - Sort versions
-- Select versions with constraints
+- Select versions given a constraint
 - Fetch versions from Git tags
 - Fetch versions from Docker image tags
-
-Planned operations for `v1.0.0`:
-
 - Dependency version selection using [MVS](https://research.swtch.com/vgo-mvs)
-- Dependency version graph analysis (without solving)
 
 ## Contents
 
+- [Contents](#contents)
 - [Get it](#get-it)
 - [Use it](#use-it)
     - [Compare versions](#compare-versions)
     - [Sort versions](#sort-versions)
     - [Select versions](#select-versions)
+    - [Solve constraint graphs](#solve-constraint-graphs)
     - [Fetch versions](#fetch-versions)
     - [JSON output](#json-output)
+    - [Sort order](#sort-order)
     - [Shell completion](#shell-completion)
 - [Licensing](#licensing)
 - [Comments](#comments)
@@ -40,14 +39,14 @@ Or [download the binary](https://github.com/sgreben/versions/releases/latest) fr
 
 ```sh
 # Linux
-curl -L https://github.com/sgreben/versions/releases/download/0.0.2/versions_0.0.2_linux_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_linux_x86_64.tar.gz | tar xz
 
 # OS X
-curl -L https://github.com/sgreben/versions/releases/download/0.0.2/versions_0.0.2_osx_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_osx_x86_64.tar.gz | tar xz
 
 # Windows
-curl -LO https://github.com/sgreben/versions/releases/download/0.0.2/versions_0.0.2_windows_x86_64.zip
-unzip versions_0.0.2_windows_x86_64.zip
+curl -LO https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_windows_x86_64.zip
+unzip versions_1.0.0_windows_x86_64.zip
 ```
 
 Also available as a [docker image](https://quay.io/repository/sergey_grebenshchikov/versions?tab=tags):
@@ -157,7 +156,7 @@ Options:
 
 Commands:
   single              Select a single version
-  graph               Select versions to satisfy a constraint graph
+  mvs                 Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)
 
 Run 'versions select COMMAND --help' for more information on a command.
 ```
@@ -165,24 +164,33 @@ Run 'versions select COMMAND --help' for more information on a command.
 #### Select the single latest version satisfying the given constraint
 
 ```sh
-$ versions select single '2.*.*' 2.0.0 0.1.0 10.0.0
+$ versions select single '2.*.*' 2.0.0 2.0.1 0.1.0 10.0.0
 ```
 ```json
-"2.0.0"
+"2.0.1"
 ```
 
 ```sh
-$ versions select single '*' 2.0.0 0.1.0 10.0.0
+$ versions select single '*' 2.0.0 2.0.1 0.1.0 10.0.0
 ```
 ```json
 "10.0.0"
 ```
 
 ```sh
-$ versions select single '^0.0.1' 2.0.0 0.1.0 10.0.0
+$ versions select single '^0.0.1' 2.0.0 2.0.1 0.1.0 10.0.0
 ```
 ```json
 "0.1.0"
+```
+
+#### Select all versions satisfying the given constraint
+
+```sh
+$ versions select all '2.*.*' 2.0.0 2.0.1 0.1.0 10.0.0
+```
+```json
+["2.0.0", "2.0.1"]
 ```
 
 #### Select the single latest version from Git tags satisfying the given constraint
@@ -217,6 +225,59 @@ $ versions select --from-docker=alpine single '^3.0.0'
 "3.7.0"
 ```
 
+### Solve constraint graphs
+
+```text
+Usage: versions select mvs TARGET [EDGE_OR_VERSION...]
+
+Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)
+
+Arguments:
+  TARGET            The name of the target package
+  EDGE_OR_VERSION   Constraint graph edges (syntax: x:1.0.0->y:~1.2.3) or version definitions (syntax: x:1.3.0)
+```
+
+#### Select a set of versions using MVS
+
+> Minimal version selection **always selects the minimal (oldest) module version** that satisfies the overall requirements of a build.
+
+Consider the three packages `A`, `B`, and `C`, where
+
+- `A` is "our" package
+- `B` has versions `1.0.0` and `2.0.0`
+- `C` also has versions `1.0.0` and `2.0.0`
+
+`A` depends on both `B` and `C`, and each version of `B` depends on the same version of `C`.
+
+If `A` does not explicitly demand `B` version `2.0.0`, MVS will select `1.0.0` for both dependencies.
+
+```sh
+$ versions select mvs A \
+  "A         -> B>=1.0.0" \
+  "A         -> C>=1.0.0" \
+  "B=1.0.0   -> C=1.*" \
+  "B=2.0.0   -> C=2.*" \
+  "C=1.0.0" \
+  "C=2.0.0"
+```
+```json
+{"B":"1.0.0","C":"1.0.0"}
+```
+
+On the other hand, if `A` *does* explicitly demand `B >= 2.0.0`, MVS will upgrade `B` to `2.0.0`, but also have to upgrade `C` to `2.0.0` due to `B`'s constraint:
+
+```sh
+$ versions select mvs A \
+  "A         -> B>=2.0.0" \
+  "A         -> C>=1.0.0" \
+  "B=1.0.0   -> C=1.*" \
+  "B=2.0.0   -> C=2.*" \
+  "C=1.0.0" \
+  "C=2.0.0"
+```
+```json
+{"B":"2.0.0","C":"2.0.0"}
+```
 
 ### Fetch versions
 
