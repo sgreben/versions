@@ -14,6 +14,12 @@
   version = "v1.9.0"
 
 [[projects]]
+  name = "github.com/gobwas/glob"
+  packages = [".","compiler","match","syntax","syntax/ast","syntax/lexer","util/runes","util/strings"]
+  revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
+  version = "v0.2.3"
+
+[[projects]]
   branch = "master"
   name = "github.com/hashicorp/errwrap"
   packages = ["."]
@@ -66,6 +72,12 @@
   packages = ["diffmatchpatch"]
   revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/sgreben/flagvar"
+  packages = ["."]
+  revision = "84f0ae2ee879ffe44ba511b8a3e79ca57365b077"
+  version = "1.5.0"
 
 [[projects]]
   name = "github.com/src-d/gcfg"
@@ -121,9 +133,15 @@
   revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
   version = "v0.1.2"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "28b0dde3d57727aeb338d9c57004d137ee79fd7d10e11cf859f39ff35cafc48f"
+  inputs-digest = "135105ca036513944f75e2465679451b4bcb01d2df30894c7976784f911a3b47"
   solver-name = "gps-cdcl"
   solver-version = 1
