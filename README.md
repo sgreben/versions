@@ -39,14 +39,14 @@ Or [download the binary](https://github.com/sgreben/versions/releases/latest) fr
 
 ```sh
 # Linux
-curl -L https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_linux_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_linux_x86_64.tar.gz | tar xz
 
 # OS X
-curl -L https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_osx_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_osx_x86_64.tar.gz | tar xz
 
 # Windows
-curl -LO https://github.com/sgreben/versions/releases/download/1.0.0/versions_1.0.0_windows_x86_64.zip
-unzip versions_1.0.0_windows_x86_64.zip
+curl -LO https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_windows_x86_64.zip
+unzip versions_1.0.1_windows_x86_64.zip
 ```
 
 Also available as a [docker image](https://quay.io/repository/sergey_grebenshchikov/versions?tab=tags):
@@ -156,6 +156,7 @@ Options:
 
 Commands:
   single              Select a single version
+  all                 Select all matching versions
   mvs                 Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)
 
 Run 'versions select COMMAND --help' for more information on a command.

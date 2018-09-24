@@ -150,7 +150,7 @@ func main() {
 	})
 
 	completeCmd.Sub["select"] = complete.Command{
-		Args: versionscmd.PredictSet1("single", "all", "graph"),
+		Args: versionscmd.PredictSet1("single", "all", "mvs"),
 		Flags: complete.Flags{
 			"--from-git":    complete.PredictAnything,
 			"--from-docker": complete.PredictAnything,

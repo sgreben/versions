@@ -156,6 +156,7 @@ Options:
 
 Commands:
   single              Select a single version
+  all                 Select all matching versions
   mvs                 Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)
 
 Run 'versions select COMMAND --help' for more information on a command.
