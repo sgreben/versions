@@ -5,14 +5,14 @@ PACKAGES := $(shell go list -f {{.Dir}} ./...)
 GOFILES  := $(addsuffix /*.go,$(PACKAGES))
 GOFILES  := $(wildcard $(GOFILES))
 
-.PHONY: clean release release-ci release-manual docker docker-latest README.md
+.PHONY: clean release docker docker-latest README.md
 
 clean:
 	rm -rf binaries/
 	rm -rf release/
 
 # go get -u github.com/github/hub
-release-manual: README.md zip
+release: README.md zip
 	git reset
 	dep ensure
 	git add vendor
