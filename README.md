@@ -39,14 +39,14 @@ Or [download the binary](https://github.com/sgreben/versions/releases/latest) fr
 
 ```sh
 # Linux
-curl -L https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_linux_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.1.0/versions_1.1.0_linux_x86_64.tar.gz | tar xz
 
 # OS X
-curl -L https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_osx_x86_64.tar.gz | tar xz
+curl -L https://github.com/sgreben/versions/releases/download/1.1.0/versions_1.1.0_osx_x86_64.tar.gz | tar xz
 
 # Windows
-curl -LO https://github.com/sgreben/versions/releases/download/1.0.1/versions_1.0.1_windows_x86_64.zip
-unzip versions_1.0.1_windows_x86_64.zip
+curl -LO https://github.com/sgreben/versions/releases/download/1.1.0/versions_1.1.0_windows_x86_64.zip
+unzip versions_1.1.0_windows_x86_64.zip
 ```
 
 Also available as a [docker image](https://quay.io/repository/sergey_grebenshchikov/versions?tab=tags):
@@ -229,13 +229,12 @@ $ versions select --from-docker=alpine single '^3.0.0'
 ### Solve constraint graphs
 
 ```text
-Usage: versions select mvs TARGET [EDGE_OR_VERSION...]
+Usage: versions select mvs CONSTRAINTS...
 
 Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)
 
 Arguments:
-  TARGET            The name of the target package
-  EDGE_OR_VERSION   Constraint graph edges (syntax: x=1.0.0 -> y~1.2.3) or version definitions (syntax: x=1.3.0)
+  CONSTRAINTS   constraint graph (JSON structure: {"my-package":{"1.0": {"other-package":"~0.0.1"}}})
 ```
 
 #### Select a set of versions using MVS
@@ -253,31 +252,52 @@ Consider the three packages `A`, `B`, and `C`, where
 If `A` does not explicitly demand `B` version `2.0.0`, MVS will select `1.0.0` for both dependencies.
 
 ```sh
-$ versions select mvs A \
-  "A         -> B>=1.0.0" \
-  "A         -> C>=1.0.0" \
-  "B=1.0.0   -> C=1.*" \
-  "B=2.0.0   -> C=2.*" \
-  "C=1.0.0" \
-  "C=2.0.0"
+$ versions select mvs '{
+    "A": {"*": {"B":">=1.0.0", "C":"~1.0.0"}},
+    "B": {
+        "1.0.0": {"C":"1.*.*"},
+        "2.0.0": {"C":"2.*.*"}
+    },
+    "C": {
+        "1.0.0":{},
+        "2.0.0":{}
+    }
+}'
 ```
 ```json
-{"B":"1.0.0","C":"1.0.0"}
+{"Selected":{"B":"1.0.0","C":"1.0.0"},"Relaxed":{}}
 ```
 
-On the other hand, if `A` *does* explicitly demand `B >= 2.0.0`, MVS will upgrade `B` to `2.0.0`, but also have to upgrade `C` to `2.0.0` due to `B`'s constraint:
+On the other hand, if `A` *does* explicitly demand `B >= 2.0.0`, MVS will upgrade `B` to `2.0.0`, but also have to upgrade `C` to `2.0.0` due to `B`'s constraint.
+MVS does not support "maximum versions", thus the constraint `C~1.0.0` of `A` must be relaxed to obtain a solution:
 
 ```sh
-$ versions select mvs A \
-  "A         -> B>=2.0.0" \
-  "A         -> C>=1.0.0" \
-  "B=1.0.0   -> C=1.*" \
-  "B=2.0.0   -> C=2.*" \
-  "C=1.0.0" \
-  "C=2.0.0"
+$ versions select mvs '{
+    "A": {"*": {"B":">=2.0.0", "C":"~1.0.0"}},
+    "B": {
+        "1.0.0": {"C":"1.*.*"},
+        "2.0.0": {"C":"2.*.*"}
+    },
+    "C": {
+        "1.0.0":{},
+        "2.0.0":{}
+    }
+}'
 ```
 ```json
-{"B":"2.0.0","C":"2.0.0"}
+{"Selected":{"B":"2.0.0","C":"2.0.0"},"Relaxed":{"A":{"C":"~1.0.0"}}}
+```
+
+The constraints can also be provided via multiple JSON arguments:
+
+```sh
+versions select mvs \
+  '{"A": {"*": {"B":">=2.0.0", "C":"~1.0.0"}}}' \
+  '{"B": {"1.0.0": {"C":"1.*.*"}, "2.0.0": {"C":"2.*.*"}}}' \
+  '{"C": {"1.0.0":{}, "2.0.0":{}}}'
+```
+```json
+{"Selected":{"B":"2.0.0","C":"2.0.0"},"Relaxed":{"A":{"C":"~1.0.0"}}}
 ```
 
 ### Fetch versions

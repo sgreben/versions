@@ -76,8 +76,8 @@
 [[projects]]
   name = "github.com/sgreben/flagvar"
   packages = ["."]
-  revision = "84f0ae2ee879ffe44ba511b8a3e79ca57365b077"
-  version = "1.5.0"
+  revision = "6958e1805ec826456e3645a9b9e910662852d3ef"
+  version = "1.6.0"
 
 [[projects]]
   name = "github.com/src-d/gcfg"
@@ -142,6 +142,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "135105ca036513944f75e2465679451b4bcb01d2df30894c7976784f911a3b47"
+  inputs-digest = "e4ef4a3d24c2f07f3c581a442dd84735d3a74494bceaa64ae1c2b540a0d939b5"
   solver-name = "gps-cdcl"
   solver-version = 1

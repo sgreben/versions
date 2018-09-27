@@ -8,9 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sgreben/versions/pkg/semver"
-
 	"github.com/sgreben/versions/pkg/versions"
+
 	"github.com/sgreben/versions/pkg/versionscmd"
 
 	"github.com/posener/complete"
@@ -218,62 +217,22 @@ func main() {
 			}
 		})
 		cmd.Command("mvs", "Select versions to satisfy a constraint graph using MVS (https://research.swtch.com/vgo-mvs)", func(cmd *cli.Cmd) {
-			cmd.Spec = "TARGET [EDGE_OR_VERSION...]"
-			var (
-				target        = cmd.StringArg("TARGET", "", "The name of the target package")
-				graphEdges    = flagvar.Assignments{Separator: "->"}
-				versionEdges  = flagvar.Assignments{Separator: "="}
-				edgeOrVersion = flagvar.Alternative{
-					Either: &graphEdges,
-					Or:     &versionEdges,
-				}
-			)
-			cmd.VarArg("EDGE_OR_VERSION", &edgeOrVersion, "Constraint graph edges (syntax: x=1.0.0 -> y~1.2.3) or version definitions (syntax: x=1.3.0)")
+			cmd.Spec = "CONSTRAINTS..."
+			constraints := flagvar.JSONs{
+				Value: func() interface{} {
+					return &versions.ConstraintStringGraph{}
+				},
+			}
+			cmd.VarArg("CONSTRAINTS", &constraints, `constraint graph (JSON structure: {"my-package":{"1.0": {"other-package":"~0.0.1"}}})`)
 			cmd.Action = func() {
 				graph := versions.ConstraintGraph{}
-				for _, kv := range versionEdges.Values {
-					name := strings.TrimSpace(kv.Key)
-					version := strings.TrimSpace(kv.Value)
-					if _, ok := graph[name]; !ok {
-						graph[name] = versions.ConstraintsForVersion{}
-					}
-					if _, ok := graph[name][version]; !ok {
-						graph[name][version] = versions.ConstraintsForName{}
-					}
-				}
-				for _, kv := range graphEdges.Values {
-					thing, wantsThing := kv.Key, kv.Value
-					var name, version string
-					name = thing
-					i := strings.LastIndexByte(thing, '=')
-					if i >= 0 {
-						name, version = thing[:i], thing[i+1:]
-					}
-					name = strings.TrimSpace(name)
-					version = strings.TrimSpace(version)
-
-					var wantsName, constraintString string
-					wantsName = wantsThing
-					constraintString = "*"
-					i = strings.IndexAny(wantsThing, "!=^<:>~")
-					if i >= 0 {
-						wantsName, constraintString = wantsThing[:i], wantsThing[i:]
-					}
-					wantsName = strings.TrimSpace(wantsName)
-					constraintString = strings.TrimSpace(constraintString)
-					if _, ok := graph[name]; !ok {
-						graph[name] = versions.ConstraintsForVersion{}
-					}
-					if _, ok := graph[name][version]; !ok {
-						graph[name][version] = versions.ConstraintsForName{}
-					}
-					constraint, err := semver.ParseConstraint(constraintString)
+				for _, val := range constraints.Values {
+					err := graph.Add(*val.(*versions.ConstraintStringGraph))
 					if err != nil {
 						log.Fatal(err)
 					}
-					graph[name][version][wantsName] = constraint
 				}
-				selectMvsCmd(*target, graph)
+				selectMvsCmd(graph)
 			}
 		})
 	})
