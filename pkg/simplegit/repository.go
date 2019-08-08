@@ -47,7 +47,11 @@ func (r *Repository) RemoteRefs() (out []struct {
 	Name      string
 	Reference string
 }, err error) {
-	remote, err := r.Cached.Remote(git.DefaultRemoteName)
+	raw, err := r.Raw()
+	if err != nil {
+		return nil, err
+	}
+	remote, err := raw.Remote(git.DefaultRemoteName)
 	if err != nil {
 		return nil, err
 	}
