@@ -4,6 +4,7 @@ import (
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
 	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
@@ -47,10 +48,14 @@ func (r *Repository) RemoteRefs() (out []struct {
 	Name      string
 	Reference string
 }, err error) {
-	raw, err := r.Raw()
+	raw, err := git.Init(memory.NewStorage(), nil)
 	if err != nil {
 		return nil, err
 	}
+	raw.CreateRemote(&config.RemoteConfig{
+		Name: git.DefaultRemoteName,
+		URLs: []string{r.URL},
+	})
 	remote, err := raw.Remote(git.DefaultRemoteName)
 	if err != nil {
 		return nil, err
