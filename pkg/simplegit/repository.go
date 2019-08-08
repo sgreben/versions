@@ -42,6 +42,31 @@ func (r *Repository) Raw() (raw *git.Repository, err error) {
 	return
 }
 
+// RemoteRefs returns the list of refs in the default remote
+func (r *Repository) RemoteRefs() (out []struct {
+	Name      string
+	Reference string
+}, err error) {
+	remote, err := r.Cached.Remote(git.DefaultRemoteName)
+	if err != nil {
+		return nil, err
+	}
+	refs, err := remote.List(nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range refs {
+		out = append(out, struct {
+			Name      string
+			Reference string
+		}{
+			Name:      ref.Name().Short(),
+			Reference: ref.Name().String(),
+		})
+	}
+	return out, nil
+}
+
 // Tags returns the list of tags in this repository.
 // Calls Fetch if necessary.
 func (r *Repository) Tags() (out []struct {
