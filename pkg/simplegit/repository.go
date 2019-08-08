@@ -55,7 +55,7 @@ func (r *Repository) RemoteRefs() (out []struct {
 	if err != nil {
 		return nil, err
 	}
-	refs, err := remote.List(nil)
+	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
