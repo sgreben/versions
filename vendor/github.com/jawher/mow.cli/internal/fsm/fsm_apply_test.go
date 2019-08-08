@@ -144,12 +144,14 @@ func TestApplyRejectOptions(t *testing.T) {
 	}
 	s := fsmtest.NewFsm(`
 		S1 a S2
-		S2 b S3
+		S2 b (S3)
 	`, matchers)
 
 	s.Prepare()
 
-	s.Parse(testArgs)
+	err := s.Parse(testArgs)
+
+	require.NoError(t, err)
 
 	require.Equal(t, []string{"a", "b"}, calls)
 

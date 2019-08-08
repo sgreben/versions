@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"testing"
 
+	"fmt"
+
 	"github.com/jawher/mow.cli/internal/flow"
 )
 
@@ -29,7 +31,8 @@ func TestTheCpCase(t *testing.T) {
 		require.Equal(t, "z", *dst)
 	}
 
-	app.Run([]string{"cp", "x", "y", "z"})
+	require.NoError(t,
+		app.Run([]string{"cp", "x", "y", "z"}))
 
 	require.True(t, ex, "Exec wasn't called")
 }
@@ -86,10 +89,77 @@ func TestInvalidSpec(t *testing.T) {
 		t.Fatalf("Should have panicked")
 	}()
 
-	app.Run([]string{"test", "-x", "-y", "hello"})
+	require.NoError(t,
+		app.Run([]string{"test", "-x", "-y", "hello"}))
 
 	t.Fatalf("Should have panicked")
+}
 
+func TestDuplicateOptionName(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Logf("Panicked with %v", p)
+			return
+		}
+		t.Fatalf("Should have panicked")
+	}()
+
+	app := App("test", "")
+	app.BoolOpt("f force", false, "")
+	app.StringOpt("f file", "", "")
+
+	t.Fatalf("Should have panicked")
+}
+
+func TestDuplicateArgName(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Logf("Panicked with %v", p)
+			return
+		}
+		t.Fatalf("Should have panicked")
+	}()
+
+	app := App("test", "")
+	app.StringArg("ARG", "", "")
+	app.StringArg("ARG", "", "")
+
+	t.Fatalf("Should have panicked")
+}
+
+func TestInvalidArgName(t *testing.T) {
+	defer func() {
+		if p := recover(); p != nil {
+			t.Logf("Panicked with %v", p)
+			return
+		}
+		t.Fatalf("Should have panicked")
+	}()
+
+	app := App("test", "")
+	app.StringArg("arg", "", "")
+
+	t.Fatalf("Should have panicked")
+}
+
+func runAppAndCheckValue(t *testing.T, name string, callArgs []string, expected interface{}, appConfigurer func(app *Cli) interface{}) {
+	t.Run(fmt.Sprintf("%s %+v", name, callArgs), func(t *testing.T) {
+		t.Logf("Testing %+v", callArgs)
+
+		app := App("app", "")
+		app.ErrorHandling = flag.ContinueOnError
+		opt := appConfigurer(app)
+
+		ex := false
+		app.Action = func() {
+			ex = true
+			require.Equal(t, expected, reflect.ValueOf(opt).Elem().Interface())
+		}
+		err := app.Run(callArgs)
+
+		require.NoError(t, err)
+		require.True(t, ex, "Exec wasn't called")
+	})
 }
 
 func TestAppWithBoolOption(t *testing.T) {
@@ -109,21 +179,26 @@ func TestAppWithBoolOption(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
-
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.BoolOpt("o option", false, "")
-
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
-
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.BoolOpt("o option", false, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Bool(BoolOpt{
+				Name: "o option",
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val bool
+			app.BoolOptPtr(&val, "o option", false, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val bool
+			app.BoolPtr(&val, BoolOpt{
+				Name: "o option",
+			})
+			return &val
+		})
 	}
 }
 
@@ -142,21 +217,28 @@ func TestAppWithStringOption(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
-
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.StringOpt("o option", "default", "")
-
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
-
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.StringOpt("o option", "default", "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.String(StringOpt{
+				Name:  "o option",
+				Value: "default",
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val string
+			app.StringOptPtr(&val, "o option", "default", "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val string
+			app.StringPtr(&val, StringOpt{
+				Name:  "o option",
+				Value: "default",
+			})
+			return &val
+		})
 	}
 }
 
@@ -175,21 +257,68 @@ func TestAppWithIntOption(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.IntOpt("o option", 3, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Int(IntOpt{
+				Name:  "o option",
+				Value: 3,
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val int
+			app.IntOptPtr(&val, "o option", 3, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val int
+			app.IntPtr(&val, IntOpt{
+				Name:  "o option",
+				Value: 3,
+			})
+			return &val
+		})
+	}
+}
 
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.IntOpt("o option", 3, "")
+func TestAppWithFloat64Option(t *testing.T) {
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+	cases := []struct {
+		args             []string
+		expectedOptValue float64
+	}{
+		{[]string{"app"}, 3.14},
+		{[]string{"app", "-o", "16.0001"}, 16.0001},
+		{[]string{"app", "-o=16.0001"}, 16.0001},
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+		{[]string{"app", "--option", "16.0001"}, 16.0001},
+		{[]string{"app", "--option=16.0001"}, 16.0001},
+	}
+
+	for _, cas := range cases {
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Float64Opt("o option", 3.14, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Float64(Float64Opt{
+				Name:  "o option",
+				Value: 3.14,
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val float64
+			app.Float64OptPtr(&val, "o option", 3.14, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val float64
+			app.Float64Ptr(&val, Float64Opt{
+				Name:  "o option",
+				Value: 3.14,
+			})
+			return &val
+		})
 	}
 }
 
@@ -208,21 +337,28 @@ func TestAppWithStringsOption(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
-
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.StringsOpt("o option", []string{"a", "b"}, "")
-
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
-
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.StringsOpt("o option", []string{"a", "b"}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Strings(StringsOpt{
+				Name:  "o option",
+				Value: []string{"a", "b"},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []string
+			app.StringsOptPtr(&val, "o option", []string{"a", "b"}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []string
+			app.StringsPtr(&val, StringsOpt{
+				Name:  "o option",
+				Value: []string{"a", "b"},
+			})
+			return &val
+		})
 	}
 }
 
@@ -241,21 +377,68 @@ func TestAppWithIntsOption(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.IntsOpt("o option", []int{1, 2}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Ints(IntsOpt{
+				Name:  "o option",
+				Value: []int{1, 2},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []int
+			app.IntsOptPtr(&val, "o option", []int{1, 2}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []int
+			app.IntsPtr(&val, IntsOpt{
+				Name:  "o option",
+				Value: []int{1, 2},
+			})
+			return &val
+		})
+	}
+}
 
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.IntsOpt("o option", []int{1, 2}, "")
+func TestAppWithFloats64Option(t *testing.T) {
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+	cases := []struct {
+		args             []string
+		expectedOptValue []float64
+	}{
+		{[]string{"app"}, []float64{1.1, 2.2}},
+		{[]string{"app", "-o", "10.05"}, []float64{10.05}},
+		{[]string{"app", "-o", "10.05", "-o=11.993"}, []float64{10.05, 11.993}},
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+		{[]string{"app", "--option", "10.05"}, []float64{10.05}},
+		{[]string{"app", "--option", "10.05", "--option=11.993"}, []float64{10.05, 11.993}},
+	}
+
+	for _, cas := range cases {
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Floats64Opt("o option", []float64{1.1, 2.2}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			return app.Floats64(Floats64Opt{
+				Name:  "o option",
+				Value: []float64{1.1, 2.2},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []float64
+			app.Floats64OptPtr(&val, "o option", []float64{1.1, 2.2}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedOptValue, func(app *Cli) interface{} {
+			var val []float64
+			app.Floats64Ptr(&val, Floats64Opt{
+				Name:  "o option",
+				Value: []float64{1.1, 2.2},
+			})
+			return &val
+		})
 	}
 }
 
@@ -263,7 +446,7 @@ func TestAppWithBoolArg(t *testing.T) {
 
 	cases := []struct {
 		args             []string
-		expectedOptValue bool
+		expectedArgValue bool
 	}{
 		{[]string{"app"}, false},
 		{[]string{"app", "true"}, true},
@@ -271,22 +454,34 @@ func TestAppWithBoolArg(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		app := App("app", "")
-		app.Spec = "[ARG]"
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.BoolArg("ARG", false, "")
+			return app.BoolArg("ARG", false, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+			return app.Bool(BoolArg{
+				Name: "ARG",
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+			var val bool
+			app.BoolArgPtr(&val, "ARG", false, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			var val bool
+			app.BoolPtr(&val, BoolArg{
+				Name: "ARG",
+			})
+			return &val
+		})
 	}
 }
 
@@ -294,29 +489,43 @@ func TestAppWithStringArg(t *testing.T) {
 
 	cases := []struct {
 		args             []string
-		expectedOptValue string
+		expectedArgValue string
 	}{
 		{[]string{"app"}, "default"},
 		{[]string{"app", "user"}, "user"},
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		app := App("app", "")
-		app.Spec = "[ARG]"
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.StringArg("ARG", "default", "")
+			return app.StringArg("ARG", "default", "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+			return app.String(StringArg{
+				Name:  "ARG",
+				Value: "default",
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+			var val string
+			app.StringArgPtr(&val, "ARG", "default", "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			var val string
+			app.StringPtr(&val, StringArg{
+				Name:  "ARG",
+				Value: "default",
+			})
+			return &val
+		})
 	}
 }
 
@@ -324,29 +533,87 @@ func TestAppWithIntArg(t *testing.T) {
 
 	cases := []struct {
 		args             []string
-		expectedOptValue int
+		expectedArgValue int
 	}{
 		{[]string{"app"}, 3},
 		{[]string{"app", "16"}, 16},
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		app := App("app", "")
-		app.Spec = "[ARG]"
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.IntArg("ARG", 3, "")
+			return app.IntArg("ARG", 3, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+			return app.Int(IntArg{
+				Name:  "ARG",
+				Value: 3,
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+			var val int
+			app.IntArgPtr(&val, "ARG", 3, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			var val int
+			app.IntPtr(&val, IntArg{
+				Name:  "ARG",
+				Value: 3,
+			})
+			return &val
+		})
+	}
+}
+
+func TestAppWithFloat64Arg(t *testing.T) {
+
+	cases := []struct {
+		args             []string
+		expectedArgValue float64
+	}{
+		{[]string{"app"}, 3.14},
+		{[]string{"app", "16.123456789"}, 16.123456789},
+	}
+
+	for _, cas := range cases {
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			return app.Float64Arg("ARG", 3.14, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			return app.Float64(Float64Arg{
+				Name:  "ARG",
+				Value: 3.14,
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			var val float64
+			app.Float64ArgPtr(&val, "ARG", 3.14, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG]"
+
+			var val float64
+			app.Float64Ptr(&val, Float64Arg{
+				Name:  "ARG",
+				Value: 3.14,
+			})
+			return &val
+		})
 	}
 }
 
@@ -354,7 +621,7 @@ func TestAppWithStringsArg(t *testing.T) {
 
 	cases := []struct {
 		args             []string
-		expectedOptValue []string
+		expectedArgValue []string
 	}{
 		{[]string{"app"}, []string{"a", "b"}},
 		{[]string{"app", "x"}, []string{"x"}},
@@ -362,22 +629,36 @@ func TestAppWithStringsArg(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		app := App("app", "")
-		app.Spec = "[ARG...]"
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.StringsArg("ARG", []string{"a", "b"}, "")
+			return app.StringsArg("ARG", []string{"a", "b"}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+			return app.Strings(StringsArg{
+				Name:  "ARG",
+				Value: []string{"a", "b"},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+			var val []string
+			app.StringsArgPtr(&val, "ARG", []string{"a", "b"}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			var val []string
+			app.StringsPtr(&val, StringsArg{
+				Name:  "ARG",
+				Value: []string{"a", "b"},
+			})
+			return &val
+		})
 	}
 }
 
@@ -385,7 +666,7 @@ func TestAppWithIntsArg(t *testing.T) {
 
 	cases := []struct {
 		args             []string
-		expectedOptValue []int
+		expectedArgValue []int
 	}{
 		{[]string{"app"}, []int{1, 2}},
 		{[]string{"app", "10"}, []int{10}},
@@ -393,22 +674,81 @@ func TestAppWithIntsArg(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Logf("Testing %#v", cas.args)
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		app := App("app", "")
-		app.Spec = "[ARG...]"
-		app.ErrorHandling = flag.ContinueOnError
-		opt := app.IntsArg("ARG", []int{1, 2}, "")
+			return app.IntsArg("ARG", []int{1, 2}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		ex := false
-		app.Action = func() {
-			ex = true
-			require.Equal(t, cas.expectedOptValue, *opt)
-		}
-		err := app.Run(cas.args)
+			return app.Ints(IntsArg{
+				Name:  "ARG",
+				Value: []int{1, 2},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
 
-		require.NoError(t, err)
-		require.True(t, ex, "Exec wasn't called")
+			var val []int
+			app.IntsArgPtr(&val, "ARG", []int{1, 2}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			var val []int
+			app.IntsPtr(&val, IntsArg{
+				Name:  "ARG",
+				Value: []int{1, 2},
+			})
+			return &val
+		})
+	}
+}
+
+func TestAppWithFloats64Arg(t *testing.T) {
+
+	cases := []struct {
+		args             []string
+		expectedArgValue []float64
+	}{
+		{[]string{"app"}, []float64{1.1, 2.2}},
+		{[]string{"app", "10.123"}, []float64{10.123}},
+		{[]string{"app", "10.123", "11.995"}, []float64{10.123, 11.995}},
+	}
+
+	for _, cas := range cases {
+		runAppAndCheckValue(t, "short", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			return app.Floats64Arg("ARG", []float64{1.1, 2.2}, "")
+		})
+		runAppAndCheckValue(t, "struct", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			return app.Floats64(Floats64Arg{
+				Name:  "ARG",
+				Value: []float64{1.1, 2.2},
+			})
+		})
+		runAppAndCheckValue(t, "short-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			var val []float64
+			app.Floats64ArgPtr(&val, "ARG", []float64{1.1, 2.2}, "")
+			return &val
+		})
+		runAppAndCheckValue(t, "struct-ptr", cas.args, cas.expectedArgValue, func(app *Cli) interface{} {
+			app.Spec = "[ARG...]"
+
+			var val []float64
+			app.Floats64Ptr(&val, Floats64Arg{
+				Name:  "ARG",
+				Value: []float64{1.1, 2.2},
+			})
+			return &val
+		})
 	}
 }
 
@@ -431,11 +771,11 @@ func testHelpAndVersionWithOptionsEnd(flag string, t *testing.T) {
 		require.Equal(t, flag, *cmd)
 	}
 
-	app.Run([]string{"x", "--", flag})
+	require.NoError(t,
+		app.Run([]string{"x", "--", flag}))
 
 	require.True(t, actionCalled, "action should have been called")
 	require.False(t, exitCalled, "exit should not have been called")
-
 }
 
 func TestHelpAndVersionWithOptionsEnd(t *testing.T) {
@@ -463,7 +803,7 @@ func TestHelpMessage(t *testing.T) {
 
 	app.String(StringOpt{Name: "s str1", Value: "", EnvVar: "STR1", Desc: "String Option 1"})
 	app.String(StringOpt{Name: "str2", Value: "a value", Desc: "String Option 2"})
-	app.String(StringOpt{Name: "u", Value: "another value", EnvVar: "STR3", Desc: "String Option 3", HideValue: true})
+	app.String(StringOpt{Name: "v", Value: "another value", EnvVar: "STR3", Desc: "String Option 3", HideValue: true})
 
 	app.Int(IntOpt{Name: "i int1", Value: 0, EnvVar: "INT1 ALIAS_INT1"})
 	app.Int(IntOpt{Name: "int2", Value: 1, EnvVar: "INT2", Desc: "Int Option 2"})
@@ -475,7 +815,7 @@ func TestHelpMessage(t *testing.T) {
 
 	app.Ints(IntsOpt{Name: "q ints1", Value: nil, EnvVar: "INTS1", Desc: "Ints Option 1"})
 	app.Ints(IntsOpt{Name: "ints2", Value: []int{1, 2, 3}, EnvVar: "INTS2", Desc: "Ints Option 2"})
-	app.Ints(IntsOpt{Name: "s", Value: []int{1}, EnvVar: "INTS3", Desc: "Ints Option 3", HideValue: true})
+	app.Ints(IntsOpt{Name: "j", Value: []int{1}, EnvVar: "INTS3", Desc: "Ints Option 3", HideValue: true})
 
 	// Args
 	app.Bool(BoolArg{Name: "BOOL1", Value: false, EnvVar: "BOOL1", Desc: "Bool Argument 1"})
@@ -504,10 +844,12 @@ func TestHelpMessage(t *testing.T) {
 	app.Command("command2", "command2 description", func(cmd *Cmd) {})
 	app.Command("command3", "command3 description", func(cmd *Cmd) {})
 
-	app.Run([]string{"app", "-h"})
+	require.NoError(t,
+		app.Run([]string{"app", "-h"}))
 
 	if *genGolden {
-		ioutil.WriteFile("testdata/help-output.txt.golden", []byte(err), 0644)
+		require.NoError(t,
+			ioutil.WriteFile("testdata/help-output.txt.golden", []byte(err), 0644))
 	}
 
 	expected, e := ioutil.ReadFile("testdata/help-output.txt")
@@ -531,13 +873,45 @@ func TestLongHelpMessage(t *testing.T) {
 	app.String(StringArg{Name: "ARG", Value: "", Desc: "Argument"})
 
 	app.Action = func() {}
-	app.Run([]string{"app", "-h"})
+	require.NoError(t,
+		app.Run([]string{"app", "-h"}))
 
 	if *genGolden {
-		ioutil.WriteFile("testdata/long-help-output.txt.golden", []byte(err), 0644)
+		require.NoError(t,
+			ioutil.WriteFile("testdata/long-help-output.txt.golden", []byte(err), 0644))
 	}
 
 	expected, e := ioutil.ReadFile("testdata/long-help-output.txt")
+	require.NoError(t, e, "Failed to read the expected help output from testdata/long-help-output.txt")
+
+	require.Equal(t, expected, []byte(err))
+}
+
+func TestMultiLineDescInHelpMessage(t *testing.T) {
+	var out, err string
+	defer captureAndRestoreOutput(&out, &err)()
+
+	exitCalled := false
+	defer exitShouldBeCalledWith(t, 0, &exitCalled)()
+
+	app := App("app", "App Desc")
+	app.LongDesc = "Longer App Desc"
+	app.Spec = "[-o] ARG"
+
+	app.String(StringOpt{Name: "o opt", Value: "default", EnvVar: "XXX_TEST", Desc: "Option\ndoes something\n  another line"})
+	app.Bool(BoolOpt{Name: "f force", Value: false, EnvVar: "YYY_TEST", Desc: "Force\ndoes something\n  another line"})
+	app.String(StringArg{Name: "ARG", Value: "", Desc: "Argument\nDescription\nMultiple\nLines"})
+
+	app.Action = func() {}
+	require.NoError(t,
+		app.Run([]string{"app", "-h"}))
+
+	if *genGolden {
+		require.NoError(t,
+			ioutil.WriteFile("testdata/multi-line-desc-help-output.txt.golden", []byte(err), 0644))
+	}
+
+	expected, e := ioutil.ReadFile("testdata/multi-line-desc-help-output.txt")
 	require.NoError(t, e, "Failed to read the expected help output from testdata/long-help-output.txt")
 
 	require.Equal(t, expected, []byte(err))
@@ -556,7 +930,8 @@ func TestVersionShortcut(t *testing.T) {
 		actionCalled = true
 	}
 
-	app.Run([]string{"cp", "--version"})
+	require.NoError(t,
+		app.Run([]string{"cp", "--version"}))
 
 	require.False(t, actionCalled, "action should not have been called")
 	require.True(t, exitCalled, "exit should have been called")
@@ -579,7 +954,8 @@ func TestSubCommands(t *testing.T) {
 		}
 	})
 
-	app.Run([]string{"say", "hi"})
+	require.NoError(t,
+		app.Run([]string{"say", "hi"}))
 	require.True(t, hi, "hi should have been called")
 	require.False(t, bye, "byte should NOT have been called")
 }
@@ -627,7 +1003,6 @@ func TestContinueOnErrorWithHelpAndVersion(t *testing.T) {
 		require.Nil(t, err)
 		require.False(t, called, "Exec should NOT have been called")
 	}
-
 }
 
 func TestExitOnError(t *testing.T) {
@@ -642,7 +1017,8 @@ func TestExitOnError(t *testing.T) {
 
 	app.String(StringArg{Name: "Y", Value: "", Desc: ""})
 
-	app.Run([]string{"x", "y", "z"})
+	require.Error(t,
+		app.Run([]string{"x", "y", "z"}))
 	require.True(t, exitCalled, "exit should have been called")
 }
 
@@ -658,7 +1034,8 @@ func TestExitOnErrorWithHelp(t *testing.T) {
 
 	app.String(StringArg{Name: "Y", Value: "", Desc: ""})
 
-	app.Run([]string{"x", "-h"})
+	require.NoError(t,
+		app.Run([]string{"x", "-h"}))
 	require.True(t, exitCalled, "exit should have been called")
 }
 
@@ -675,7 +1052,8 @@ func TestExitOnErrorWithVersion(t *testing.T) {
 
 	app.String(StringArg{Name: "Y", Value: "", Desc: ""})
 
-	app.Run([]string{"x", "-v"})
+	require.NoError(t,
+		app.Run([]string{"x", "-v"}))
 	require.True(t, exitCalled, "exit should have been called")
 }
 
@@ -694,11 +1072,10 @@ func TestPanicOnError(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			require.False(t, called, "Exec should NOT have been called")
-		} else {
-
 		}
 	}()
-	app.Run([]string{"say"})
+	require.NoError(t,
+		app.Run([]string{"say"}))
 	t.Fatalf("wanted panic")
 }
 
@@ -847,22 +1224,25 @@ func TestOptSetByUser(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Log(cas.desc)
+		t.Run(cas.desc, func(t *testing.T) {
+			t.Log(cas.desc)
 
-		setByUser := false
-		app := App("test", "")
+			setByUser := false
+			app := App("test", "")
 
-		cas.config(app, &setByUser)
+			cas.config(app, &setByUser)
 
-		called := false
-		app.Action = func() {
-			called = true
-		}
+			called := false
+			app.Action = func() {
+				called = true
+			}
 
-		app.Run(cas.args)
+			require.NoError(t,
+				app.Run(cas.args))
 
-		require.True(t, called, "action should have been called")
-		require.Equal(t, cas.expected, setByUser)
+			require.True(t, called, "action should have been called")
+			require.Equal(t, cas.expected, setByUser)
+		})
 	}
 }
 
@@ -1026,22 +1406,25 @@ func TestArgSetByUser(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Log(cas.desc)
+		t.Run(cas.desc, func(t *testing.T) {
+			t.Log(cas.desc)
 
-		setByUser := false
-		app := App("test", "")
+			setByUser := false
+			app := App("test", "")
 
-		cas.config(app, &setByUser)
+			cas.config(app, &setByUser)
 
-		called := false
-		app.Action = func() {
-			called = true
-		}
+			called := false
+			app.Action = func() {
+				called = true
+			}
 
-		app.Run(cas.args)
+			require.NoError(t,
+				app.Run(cas.args))
 
-		require.True(t, called, "action should have been called")
-		require.Equal(t, cas.expected, setByUser)
+			require.True(t, called, "action should have been called")
+			require.Equal(t, cas.expected, setByUser)
+		})
 	}
 
 }
@@ -1270,27 +1653,30 @@ func TestOptSetByEnv(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Log(cas.desc)
+		t.Run(cas.desc, func(t *testing.T) {
+			t.Log(cas.desc)
 
-		app := App("test", "")
+			app := App("test", "")
 
-		pointer := cas.config(app)
+			pointer := cas.config(app)
 
-		called := false
-		app.Action = func() {
-			called = true
-		}
+			called := false
+			app.Action = func() {
+				called = true
+			}
 
-		app.Run(cas.args)
+			require.NoError(t,
+				app.Run(cas.args))
 
-		typ := reflect.TypeOf(pointer)
-		if typ.Kind() != reflect.Ptr {
-			t.Fatalf("config func did not return a pointer")
-		}
-		actualValue := reflect.ValueOf(pointer).Elem().Interface()
+			typ := reflect.TypeOf(pointer)
+			if typ.Kind() != reflect.Ptr {
+				t.Fatalf("config func did not return a pointer")
+			}
+			actualValue := reflect.ValueOf(pointer).Elem().Interface()
 
-		require.True(t, called, "action should have been called")
-		require.Equal(t, cas.expected, actualValue)
+			require.True(t, called, "action should have been called")
+			require.Equal(t, cas.expected, actualValue)
+		})
 	}
 }
 
@@ -1538,28 +1924,31 @@ func TestArgSetByEnv(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		t.Log(cas.desc)
+		t.Run(cas.desc, func(t *testing.T) {
+			t.Log(cas.desc)
 
-		app := App("test", "")
-		app.ErrorHandling = flag.ContinueOnError
+			app := App("test", "")
+			app.ErrorHandling = flag.ContinueOnError
 
-		pointer := cas.config(app)
+			pointer := cas.config(app)
 
-		called := false
-		app.Action = func() {
-			called = true
-		}
+			called := false
+			app.Action = func() {
+				called = true
+			}
 
-		app.Run(cas.args)
+			require.NoError(t,
+				app.Run(cas.args))
 
-		typ := reflect.TypeOf(pointer)
-		if typ.Kind() != reflect.Ptr {
-			t.Fatalf("config func did not return a pointer")
-		}
-		actualValue := reflect.ValueOf(pointer).Elem().Interface()
+			typ := reflect.TypeOf(pointer)
+			if typ.Kind() != reflect.Ptr {
+				t.Fatalf("config func did not return a pointer")
+			}
+			actualValue := reflect.ValueOf(pointer).Elem().Interface()
 
-		require.True(t, called, "action should have been called")
-		require.Equal(t, cas.expected, actualValue)
+			require.True(t, called, "action should have been called")
+			require.Equal(t, cas.expected, actualValue)
+		})
 	}
 }
 
@@ -1571,7 +1960,8 @@ func TestCommandAction(t *testing.T) {
 
 	app.Command("a", "", ActionCommand(func() { called = true }))
 
-	app.Run([]string{"app", "a"})
+	require.NoError(t,
+		app.Run([]string{"app", "a"}))
 
 	require.True(t, called, "commandAction should be called")
 
@@ -1603,26 +1993,28 @@ func TestCommandAliases(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		app := App("say", "")
-		app.ErrorHandling = flag.ContinueOnError
+		t.Run(fmt.Sprintf("%+v", cas.args), func(t *testing.T) {
+			app := App("say", "")
+			app.ErrorHandling = flag.ContinueOnError
 
-		called := false
+			called := false
 
-		app.Command("hello hi", "", func(cmd *Cmd) {
-			cmd.Action = func() {
-				called = true
+			app.Command("hello hi", "", func(cmd *Cmd) {
+				cmd.Action = func() {
+					called = true
+				}
+			})
+
+			err := app.Run(cas.args)
+
+			if cas.errorExpected {
+				require.Error(t, err, "Run() should have returned with an error")
+				require.False(t, called, "action should not have been called")
+			} else {
+				require.NoError(t, err, "Run() should have returned without an error")
+				require.True(t, called, "action should have been called")
 			}
 		})
-
-		err := app.Run(cas.args)
-
-		if cas.errorExpected {
-			require.Error(t, err, "Run() should have returned with an error")
-			require.False(t, called, "action should not have been called")
-		} else {
-			require.NoError(t, err, "Run() should have returned without an error")
-			require.True(t, called, "action should have been called")
-		}
 	}
 }
 
@@ -1657,25 +2049,27 @@ func TestSubcommandAliases(t *testing.T) {
 	}
 
 	for _, cas := range cases {
-		app := App("app", "")
-		app.ErrorHandling = flag.ContinueOnError
+		t.Run(fmt.Sprintf("%+v", cas.args), func(t *testing.T) {
+			app := App("app", "")
+			app.ErrorHandling = flag.ContinueOnError
 
-		called := false
+			called := false
 
-		app.Command("foo f", "", func(cmd *Cmd) {
-			cmd.Command("bar b", "", func(cmd *Cmd) {
-				cmd.Command("baz z", "", func(cmd *Cmd) {
-					cmd.Action = func() {
-						called = true
-					}
+			app.Command("foo f", "", func(cmd *Cmd) {
+				cmd.Command("bar b", "", func(cmd *Cmd) {
+					cmd.Command("baz z", "", func(cmd *Cmd) {
+						cmd.Action = func() {
+							called = true
+						}
+					})
 				})
 			})
+
+			err := app.Run(cas.args)
+
+			require.NoError(t, err, "Run() should have returned without an error")
+			require.True(t, called, "action should have been called")
 		})
-
-		err := app.Run(cas.args)
-
-		require.NoError(t, err, "Run() should have returned without an error")
-		require.True(t, called, "action should have been called")
 	}
 }
 
@@ -1696,13 +2090,15 @@ func TestBeforeAndAfterFlowOrder(t *testing.T) {
 	})
 	app.After = callChecker(t, 6, &counter)
 
-	app.Run([]string{"app", "c", "cc"})
+	require.NoError(t,
+		app.Run([]string{"app", "c", "cc"}))
 	require.Equal(t, 7, counter)
 }
 
 func TestBeforeAndAfterFlowOrderWhenOneBeforePanics(t *testing.T) {
 	defer func() {
-		recover()
+		r := recover()
+		require.Equal(t, 42, r)
 	}()
 
 	counter := 0
@@ -1725,7 +2121,8 @@ func TestBeforeAndAfterFlowOrderWhenOneBeforePanics(t *testing.T) {
 	})
 	app.After = callChecker(t, 4, &counter)
 
-	app.Run([]string{"app", "c", "cc"})
+	require.NoError(t,
+		app.Run([]string{"app", "c", "cc"}))
 	require.Equal(t, 5, counter)
 }
 
@@ -1751,7 +2148,8 @@ func TestBeforeAndAfterFlowOrderWhenOneAfterPanics(t *testing.T) {
 	})
 	app.After = callChecker(t, 6, &counter)
 
-	app.Run([]string{"app", "c", "cc"})
+	require.NoError(t,
+		app.Run([]string{"app", "c", "cc"}))
 	require.Equal(t, 7, counter)
 }
 
@@ -1777,7 +2175,8 @@ func TestBeforeAndAfterFlowOrderWhenMultipleAftersPanic(t *testing.T) {
 	})
 	app.After = callCheckerAndPanic(t, 666, 6, &counter)
 
-	app.Run([]string{"app", "c", "cc"})
+	require.NoError(t,
+		app.Run([]string{"app", "c", "cc"}))
 	require.Equal(t, 7, counter)
 }
 

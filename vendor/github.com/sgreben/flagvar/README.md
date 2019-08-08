@@ -1,6 +1,6 @@
 # flagvar
 
-[![](https://godoc.org/github.com/sgreben/flagvar?status.svg)](http://godoc.org/github.com/sgreben/flagvar) [![](https://goreportcard.com/badge/github.com/sgreben/flagvar/goreportcard)](https://goreportcard.com/report/github.com/sgreben/flagvar) [![cover.run](https://cover.run/go/github.com/sgreben/flagvar.svg?style=flat&tag=golang-1.10)](https://cover.run/go?tag=golang-1.10&repo=github.com%2Fsgreben%2Fflagvar) [![Build Status](https://travis-ci.org/sgreben/flagvar.svg?branch=master)](https://travis-ci.org/sgreben/flagvar)
+[![](https://godoc.org/github.com/sgreben/flagvar?status.svg)](http://godoc.org/github.com/sgreben/flagvar) [![](https://goreportcard.com/badge/github.com/sgreben/flagvar/goreportcard)](https://goreportcard.com/report/github.com/sgreben/flagvar) [![coverage](https://img.shields.io/badge/coverage-96.6%25-green.svg)](https://gocover.io/github.com/sgreben/flagvar) [![Build Status](https://travis-ci.org/sgreben/flagvar.svg?branch=master)](https://travis-ci.org/sgreben/flagvar)
 
 A collection of CLI argument types for the `flag` package.
 
@@ -122,6 +122,7 @@ Here's a compact overview:
 | [TCPAddrsCSV](https://godoc.org/github.com/sgreben/flagvar#TCPAddrsCSV)        | 127.0.0.1:10,:123               | []net.TCPAddr                              |
 | [Template](https://godoc.org/github.com/sgreben/flagvar#Template)    | "{{.Size}}"        | *template.Template                   |
 | [Templates](https://godoc.org/github.com/sgreben/flagvar#Templates)   | "{{.Size}}"        | []*template.Template                 |
+| [TemplateFile](https://godoc.org/github.com/sgreben/flagvar#TemplateFile)   | "/path/to/template.file"        | string                 |
 | [Time](https://godoc.org/github.com/sgreben/flagvar#Time)        | "10:30 AM"         | time.Time                            |
 | [Times](https://godoc.org/github.com/sgreben/flagvar#Times)       | "10:30 AM"         | []time.Time                          |
 | [UDPAddr](https://godoc.org/github.com/sgreben/flagvar#UDPAddr)        | 127.0.0.1:10               | net.UDPAddr                              |

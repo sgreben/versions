@@ -119,7 +119,7 @@ func (s *WorktreeSuite) TestPullNonFastForward(c *C) {
 	c.Assert(err, IsNil)
 
 	err = w.Pull(&PullOptions{})
-	c.Assert(err, ErrorMatches, "non-fast-forward update")
+	c.Assert(err, Equals, ErrNonFastForwardUpdate)
 }
 
 func (s *WorktreeSuite) TestPullUpdateReferencesIfNeeded(c *C) {
@@ -314,6 +314,46 @@ func (s *WorktreeSuite) TestCheckoutForce(c *C) {
 	c.Assert(entries, HasLen, 8)
 }
 
+func (s *WorktreeSuite) TestCheckoutKeep(c *C) {
+	w := &Worktree{
+		r:          s.Repository,
+		Filesystem: memfs.New(),
+	}
+
+	err := w.Checkout(&CheckoutOptions{
+		Force: true,
+	})
+	c.Assert(err, IsNil)
+
+	// Create a new branch and create a new file.
+	err = w.Checkout(&CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName("new-branch"),
+		Create: true,
+	})
+	c.Assert(err, IsNil)
+
+	w.Filesystem = memfs.New()
+	f, err := w.Filesystem.Create("new-file.txt")
+	c.Assert(err, IsNil)
+	_, err = f.Write([]byte("DUMMY"))
+	c.Assert(err, IsNil)
+	c.Assert(f.Close(), IsNil)
+
+	// Add the file to staging.
+	_, err = w.Add("new-file.txt")
+	c.Assert(err, IsNil)
+
+	// Switch branch to master, and verify that the new file was kept in staging.
+	err = w.Checkout(&CheckoutOptions{
+		Keep: true,
+	})
+	c.Assert(err, IsNil)
+
+	fi, err := w.Filesystem.Stat("new-file.txt")
+	c.Assert(err, IsNil)
+	c.Assert(fi.Size(), Equals, int64(5))
+}
+
 func (s *WorktreeSuite) TestCheckoutSymlink(c *C) {
 	if runtime.GOOS == "windows" {
 		c.Skip("git doesn't support symlinks by default in windows")
@@ -365,8 +405,14 @@ func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
 
 	w, err := server.Worktree()
 	c.Assert(err, IsNil)
-	util.WriteFile(w.Filesystem, filename, []byte("foo"), 0755)
-	_, err = w.Add(filename)
+
+	writeFile := func(path string) {
+		err := util.WriteFile(w.Filesystem, path, []byte("foo"), 0755)
+		c.Assert(err, IsNil)
+	}
+
+	writeFile(filename)
+	origHash, err := w.Add(filename)
 	c.Assert(err, IsNil)
 	_, err = w.Commit("foo", &CommitOptions{Author: defaultSignature()})
 	c.Assert(err, IsNil)
@@ -386,12 +432,33 @@ func (s *WorktreeSuite) TestFilenameNormalization(c *C) {
 	err = w.Filesystem.Remove(filename)
 	c.Assert(err, IsNil)
 
-	modFilename := norm.Form(norm.NFKD).String(filename)
-	util.WriteFile(w.Filesystem, modFilename, []byte("foo"), 0755)
+	modFilename := norm.NFKD.String(filename)
+	writeFile(modFilename)
 
 	_, err = w.Add(filename)
 	c.Assert(err, IsNil)
-	_, err = w.Add(modFilename)
+	modHash, err := w.Add(modFilename)
+	c.Assert(err, IsNil)
+	// At this point we've got two files with the same content.
+	// Hence their hashes must be the same.
+	c.Assert(origHash == modHash, Equals, true)
+
+	status, err = w.Status()
+	c.Assert(err, IsNil)
+	// However, their names are different and the work tree is still dirty.
+	c.Assert(status.IsClean(), Equals, false)
+
+	// Revert back the deletion of the first file.
+	writeFile(filename)
+	_, err = w.Add(filename)
+	c.Assert(err, IsNil)
+
+	status, err = w.Status()
+	c.Assert(err, IsNil)
+	// Still dirty - the second file is added.
+	c.Assert(status.IsClean(), Equals, false)
+
+	_, err = w.Remove(modFilename)
 	c.Assert(err, IsNil)
 
 	status, err = w.Status()
@@ -1102,6 +1169,34 @@ func (s *WorktreeSuite) TestIgnored(c *C) {
 	c.Assert(file.Worktree, Equals, Untracked)
 }
 
+func (s *WorktreeSuite) TestExcludedNoGitignore(c *C) {
+	f := fixtures.ByTag("empty").One()
+	r := s.NewRepository(f)
+
+	fs := memfs.New()
+	w := &Worktree{
+		r:          r,
+		Filesystem: fs,
+	}
+
+	_, err := fs.Open(".gitignore")
+	c.Assert(err, Equals, os.ErrNotExist)
+
+	w.Excludes = make([]gitignore.Pattern, 0)
+	w.Excludes = append(w.Excludes, gitignore.ParsePattern("foo", nil))
+
+	err = util.WriteFile(w.Filesystem, "foo", []byte("FOO"), 0755)
+	c.Assert(err, IsNil)
+
+	status, err := w.Status()
+	c.Assert(err, IsNil)
+	c.Assert(status, HasLen, 0)
+
+	file := status.File("foo")
+	c.Assert(file.Staging, Equals, Untracked)
+	c.Assert(file.Worktree, Equals, Untracked)
+}
+
 func (s *WorktreeSuite) TestAddModified(c *C) {
 	fs := memfs.New()
 	w := &Worktree{
@@ -1580,6 +1675,7 @@ func (s *WorktreeSuite) TestClean(c *C) {
 
 	// Status before cleaning.
 	status, err := wt.Status()
+	c.Assert(err, IsNil)
 	c.Assert(len(status), Equals, 2)
 
 	err = wt.Clean(&CleanOptions{})
@@ -1591,6 +1687,10 @@ func (s *WorktreeSuite) TestClean(c *C) {
 
 	c.Assert(len(status), Equals, 1)
 
+	fi, err := fs.Lstat("pkgA")
+	c.Assert(err, IsNil)
+	c.Assert(fi.IsDir(), Equals, true)
+
 	// Clean with Dir: true.
 	err = wt.Clean(&CleanOptions{Dir: true})
 	c.Assert(err, IsNil)
@@ -1599,6 +1699,11 @@ func (s *WorktreeSuite) TestClean(c *C) {
 	c.Assert(err, IsNil)
 
 	c.Assert(len(status), Equals, 0)
+
+	// An empty dir should be deleted, as well.
+	_, err = fs.Lstat("pkgA")
+	c.Assert(err, ErrorMatches, ".*(no such file or directory.*|.*file does not exist)*.")
+
 }
 
 func (s *WorktreeSuite) TestAlternatesRepo(c *C) {

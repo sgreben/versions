@@ -12,13 +12,13 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-// Basic example of how to commit changes to the current branch to an existent
+// Basic example of how to commit changes to the current branch to an existing
 // repository.
 func main() {
 	CheckArgs("<directory>")
 	directory := os.Args[1]
 
-	// Opens an already existent repository.
+	// Opens an already existing repository.
 	r, err := git.PlainOpen(directory)
 	CheckIfError(err)
 
@@ -27,7 +27,7 @@ func main() {
 
 	// ... we need a file to commit so let's create a new file inside of the
 	// worktree of the project using the go standard library.
-	Info("echo \"hellow world!\" > example-git-file")
+	Info("echo \"hello world!\" > example-git-file")
 	filename := filepath.Join(directory, "example-git-file")
 	err = ioutil.WriteFile(filename, []byte("hello world!"), 0644)
 	CheckIfError(err)
@@ -44,7 +44,7 @@ func main() {
 
 	fmt.Println(status)
 
-	// Commits the current staging are to the repository, with the new file
+	// Commits the current staging area to the repository, with the new file
 	// just created. We should provide the object.Signature of Author of the
 	// commit.
 	Info("git commit -m \"example go-git commit\"")
